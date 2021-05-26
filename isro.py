@@ -1,10 +1,11 @@
 import requests
 from datetime import datetime, timedelta
+import os
 import cv2
 
 # -----------------------------------------------------------------------------------------------------------------------
-''''
-    This is code that will generate a timelapse of ISRO satellite images by downloading all their available satellite 
+'''
+    This is code that will generate a time-lapse of ISRO satellite images by downloading all their available satellite 
     images and stitching them together to form a video.
     
     The images on the MOSDAC website follow a simple time format in their URLs and this code simply generates a URL,
@@ -32,11 +33,19 @@ start = '13-05-2021'              # The start date for the video format - 'dd-mm
 end = '21-05-2021'                # not inclusive, if you want it to time-lapse till 22, enter 21
 type = 'L1C_ASIA_MER_BIMG'        # the desired image type
 framerate = 24                    # there will be around 48 images a day, so chose a frame-rate accordingly
-VideoName = 'Tauktae'              # the name of the saved video.
+VideoName = 'Tauktae'             # the name of the saved video.
 
-# please note, remove the images from the folder before running the code the second time, the code will rewrite over
-# the images and if you want to preserve them then move them to another folder or you can delete them after creating
-# a video.
+# Making folders to store the images and videos
+if os.path.isdir(f"Images/{VideoName}"):
+    print(f"Images/{VideoName} already exists, change the VideoName and try again")
+    None
+else:
+    os.makedirs(f"Images/{VideoName}")
+
+if os.path.isdir('Videos'):
+    None
+else:
+    os.mkdir('Videos')
 
 # Creates a list of dates between the specified dates
 start = datetime.strptime(start, '%d-%m-%Y')
@@ -106,10 +115,10 @@ def images():
                 fileTIME = time
 
             if a == 200:  # saves the file
-                with open(f"{date}_{year}_{fileTIME}.jpg", 'wb') as file:
+                with open(f"Images/{VideoName}/{date}_{year}_{fileTIME}.jpg", 'wb') as file:
                     file.write(request.content)
-                    fileLIST.append(f"{date}_{year}_{fileTIME}.jpg")
-                    print(f"Image saved as {date}_{year}_{fileTIME}.jpg!")
+                    fileLIST.append(f"Images/{VideoName}/{date}_{year}_{fileTIME}.jpg")
+                    print(f"Image saved as Images/{VideoName}/{date}_{year}_{fileTIME}.jpg!")
             else:
                 print('Image not found :-(')
     return fileLIST
@@ -122,7 +131,7 @@ for image in images():
     size = (width, height)
     image_list.append(img)
 
-out = cv2.VideoWriter(f"{VideoName}.avi", cv2.VideoWriter_fourcc(*'DIVX'), framerate, size)
+out = cv2.VideoWriter(f"Videos/{VideoName}.avi", cv2.VideoWriter_fourcc(*'DIVX'), framerate, size)
 
 print('Creating Video')
 for i in range(len(image_list)):
