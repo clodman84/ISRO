@@ -1,4 +1,5 @@
-import requests
+import httpx
+import asyncio
 from datetime import datetime, timedelta
 import os
 import cv2
@@ -30,14 +31,14 @@ import cv2
 # enter all the variables here
 
 start = '13-05-2021'              # The start date for the video format - 'dd-mm-yyyy'
-end = '21-05-2021'                # not inclusive, if you want it to time-lapse till 22, enter 21
+end = '21-05-2021'                # if you want it to time-lapse till 20, enter 21
 type = 'L1C_ASIA_MER_BIMG'        # the desired image type
 framerate = 24                    # there will be around 48 images a day, so chose a frame-rate accordingly
 VideoName = 'Tauktae'             # the name of the saved video.
 
-# Making folders to store the images and videos
+# creating the folders
 if os.path.isdir(f"Images/{VideoName}"):
-    print(f"Images/{VideoName} already exists, change the VideoName and try again")
+    print(f"Images/{VideoName} already exists, the file will be overwritten")
     None
 else:
     os.makedirs(f"Images/{VideoName}")
@@ -52,7 +53,7 @@ start = datetime.strptime(start, '%d-%m-%Y')
 end = datetime.strptime(end, '%d-%m-%Y')
 dateList = [start + timedelta(days=x) for x in range(0, (end - start).days)]
 
-def images():
+async def images():
     """
     This is where the image URLs are generated, it returns a list of saved file-names which makes it easy for
     the video creation part of the code.
@@ -63,12 +64,13 @@ def images():
     Sometimes the image timings are off by a minute, so it check 0029 and 0059 etc as well. Sometimes images are missing
     completely.
     """
+    urls = []
     fileLIST = []  # stores a list of file-names to return
     for d in dateList:   # looping through each day in the date-list created
         time = '0000'
         date = d.strftime('%d%b').upper()
         year = d.strftime('%Y')
-        print(f"{date} {year} --------------------")
+        print('Generating Image URLs')
         while int(time) <= 2330:
             # increments the time by 30 minutes
             if time[2:] == '00':
@@ -77,65 +79,53 @@ def images():
                 time = str(int(time[:-2]) + 1) + '00'
             if len(time) == 3:
                 time = '0' + time
-
-            print(f"starting {time}")
             url = f"https://mosdac.gov.in/look/3D_IMG/gallery/{year}/{date}/3DIMG_{date}{year}_{time}_{type}.jpg"
-            # does a get request
-            request = requests.get(url=url)
-            a = request.status_code
-            # trying 29 and 59 in case it returns a 404
-            if a == 404:
-                # reduces the time by minute and tries again. Stored in a separate variable so the next iteration of
-                # the while loop is not affected
+            urls.append(url)
 
-                if time[2:] == '00':
+            # trying 29 and 59 in case it returns a 404 using a NEWtime variable to keep the first part of this while
+            # loop intact and not messing with the time variable
+            if time[2:] == '00':
                     NEWtime = str(int(time[:-2]) - 1) + '59'
-                else:
+            else:
                     NEWtime = time[:-2] + "29"
-                if len(NEWtime) == 3:
+            if len(NEWtime) == 3:
                     NEWtime = '0' + NEWtime
-
-                # fileTIME is the time that is stored in the file, which should match whatever time is on the image
-                # itself
-                fileTIME = NEWtime
-                url = f"https://mosdac.gov.in/look/3D_IMG/gallery/{year}/{date}/3DIMG_{date}{year}_{NEWtime}_{type}.jpg"
-                request = requests.get(url=url)
-                a = request.status_code
-
-                # the code will hit 2400, then it won't work, then it will try 2359 as usual, if it still doesn't catch
-                # it, it will hit this case and try time = 0000
-                if time == '2400' and a != 200:
-                    fileTIME == '0000'
-                    print(f"{NEWtime} did not work, trying 0000")
-                    url = f"https://mosdac.gov.in/look/3D_IMG/gallery/{year}/{date}/3DIMG_{date}{year}_{fileTIME}_{type}.jpg"
-                    request = requests.get(url=url)
-                    a = request.status_code
-            else:
-                # if it does not hit a 404
-                fileTIME = time
-
-            if a == 200:  # saves the file
-                with open(f"Images/{VideoName}/{date}_{year}_{fileTIME}.jpg", 'wb') as file:
-                    file.write(request.content)
-                    fileLIST.append(f"Images/{VideoName}/{date}_{year}_{fileTIME}.jpg")
-                    print(f"Image saved as Images/{VideoName}/{date}_{year}_{fileTIME}.jpg!")
-            else:
-                print('Image not found :-(')
+            url = f"https://mosdac.gov.in/look/3D_IMG/gallery/{year}/{date}/3DIMG_{date}{year}_{NEWtime}_{type}.jpg"
+            urls.append(url)
+            url = f"https://mosdac.gov.in/look/3D_IMG/gallery/{year}/{date}/3DIMG_{date}{year}_{0000}_{type}.jpg"
+            urls.append(url)
+    print('Finished generating URLs')
+    print('Getting Data')
+    async with httpx.AsyncClient(timeout=None) as client:
+        tasks = (client.get(url) for url in urls)
+        reqs = await asyncio.gather(*tasks)
+    for i in reqs:
+        if i.status_code == 200:
+            ImageName = str(i.url).split('/')[-1]
+            with open(f"Images/{VideoName}/{ImageName}", 'wb') as file:
+                file.write(i.content)
+                fileLIST.append(f"Images/{VideoName}/{ImageName}")
+    print('Done')
     return fileLIST
 
-print('Creating Image List')
-image_list = []
-for image in images():
-    img = cv2.imread(image)
-    height, width, layers = img.shape
-    size = (width, height)
-    image_list.append(img)
+def video():
+    image_list = []
+    image_files = asyncio.run(images())
+    for image in image_files:
+        img = cv2.imread(image)
+        height, width, layers = img.shape
+        size = (width, height)
+        image_list.append(img)
 
-out = cv2.VideoWriter(f"Videos/{VideoName}.avi", cv2.VideoWriter_fourcc(*'DIVX'), framerate, size)
+    out = cv2.VideoWriter(f"Videos/{VideoName}.avi", cv2.VideoWriter_fourcc(*'DIVX'), framerate, size)
 
-print('Creating Video')
-for i in range(len(image_list)):
-    out.write(image_list[i])
+    print('Creating Video')
+    for i in range(len(image_list)):
+        out.write(image_list[i])
 
-out.release()
-print('DONE!')
+    out.release()
+    print('DONE!')
+
+
+if __name__ == '__main__':
+    video()
