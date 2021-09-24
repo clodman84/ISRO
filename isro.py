@@ -11,7 +11,7 @@ import cv2
     
     The images on the MOSDAC website follow a simple time format in their URLs and this code simply generates a URL,
     tries a request.get() on the url and then if it 404s it tries the another URL. I tried my best to get the URLs by 
-    simple post requests but I wasn't able to get that to work, so you have to deal with this pile of crap :-)
+    simple post requests but I wasn't able to get that to work, so you have to deal with this.
 
     To operate this code, specify a start and end date, if you enter a date for when the satellite was not in orbit or if
     it is in the future, the code will run as usual and not give any warnings, but it will take a very long time since 
