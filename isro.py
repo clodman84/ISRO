@@ -63,7 +63,6 @@ class TimeLapse:
                 urls.append(url)
                 url = f"{mosdacString}/{year}/{date}/3DIMG_{date}{year}_{0000}_{self.type_}.jpg"
                 urls.append(url)
-        print('URLs Generated!')
         return urls
 
     async def getImages(self):
@@ -87,10 +86,9 @@ class TimeLapse:
         for image in image_files:
             img = cv2.imread(image)
             image_list.append(img)
-
         height, width = image_list[0].shape[0:2]
         size = (width, height)
-
+        print(size)
         out = cv2.VideoWriter(
             f"Videos/{self.name}.avi",
             cv2.VideoWriter_fourcc(*"DIVX"),
@@ -104,6 +102,3 @@ class TimeLapse:
         out.release()
         print("DONE!")
 
-
-video = TimeLapse("Tauktae", "13-05-2021", "21-05-2021", "L1C_ASIA_MER_BIMG")
-video.video()
