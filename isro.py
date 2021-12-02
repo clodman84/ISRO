@@ -7,6 +7,8 @@ import cv2
 
 class TimeLapse:
     def __init__(self, name, start_date, end_date, type_, frame_rate=24):
+        """Works by creating a list of urls with the given parameters of date and type amd then fetches them to
+        stitch together into a video."""
         self.name = name
         self.type_ = type_
         self.frame_rate = frame_rate
@@ -88,7 +90,6 @@ class TimeLapse:
             image_list.append(img)
         height, width = image_list[0].shape[0:2]
         size = (width, height)
-        print(size)
         out = cv2.VideoWriter(
             f"Videos/{self.name}.avi",
             cv2.VideoWriter_fourcc(*"DIVX"),
@@ -97,8 +98,54 @@ class TimeLapse:
         )
 
         print("Creating Video")
-        for i in range(len(image_list)):
-            out.write(image_list[i])
+        for image in image_list:
+            out.write(image)
         out.release()
+        del out
+        del image_files
         print("DONE!")
 
+
+async def preview(date, year, time, type_, file_name):
+    """To get the preview images when the preview button is clicked.
+    Copy pasted from https://github.com/clodman84/AternosReborn/blob/master/space.py"""
+    count = 0
+    urls = []
+    mosdacString = 'https://mosdac.gov.in/look/3D_IMG/gallery'
+    if int(time[2:]) >= 30:
+        time = str(int(time[0:2]) + 1) + "00"
+        if len(time) == 3:
+            time = "0" + time
+    else:
+        time = time[0:2] + "30"
+    while int(time) > 0 and count <= 10:
+        count += 1
+        if time[2:] == "00":
+            time = str(int(time[:-2]) - 1) + "30"
+        else:
+            time = time[:-2] + "00"
+        if len(time) == 3:
+            time = "0" + time
+        url = f"{mosdacString}/{year}/{date}/3DIMG_{date}{year}_{time}_{type_}.jpg"
+        urls.append(url)
+        # trying 29 and 59
+        if time[2:] == "00":
+            NEWtime = str(int(time[:-2]) - 1) + "59"
+        else:
+            NEWtime = time[:-2] + "29"
+        if len(NEWtime) == 3:
+            NEWtime = "0" + NEWtime
+            url = f"{mosdacString}/{year}/{date}/3DIMG_{date}{year}_{NEWtime}_{type_}.jpg"
+            urls.append(url)
+
+    async with httpx.AsyncClient(timeout=None) as client:
+        tasks = (client.get(url) for url in urls)
+        reqs = await asyncio.gather(*tasks)
+
+    for i in reqs:
+        if i.status_code == 200:
+            with open(f"{file_name}.jpg", "wb") as file:
+                file.write(i.content)
+            return True
+
+    return False
