@@ -117,7 +117,6 @@ class EntryWindow:
         if self.get_settings():
             video = isro.TimeLapse(*self.settings)
             video.video()
-            del video
         else:
             self.show_error(msg='You have not entered all the values yet')
 

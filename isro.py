@@ -2,7 +2,7 @@ import httpx
 import asyncio
 from datetime import datetime, timedelta
 import os
-import cv2
+import time as t
 
 
 class TimeLapse:
@@ -31,14 +31,18 @@ class TimeLapse:
             pass
         else:
             os.mkdir("Videos")
-        print('Folders Created!')
+        print("Folders Created!")
 
     def generateURLS(self):
         # this can be better I think
         urls = []
         mosdacString = "https://mosdac.gov.in/look/3D_IMG/gallery"
         print("Creating URLs")
-        for d in self.dateList:  # looping through each day in the date-list created to generate urls
+        for (
+            d
+        ) in (
+            self.dateList
+        ):  # looping through each day in the date-list created to generate urls
             print(d)
             time = "0000"
             date = d.strftime("%d%b").upper()
@@ -68,41 +72,56 @@ class TimeLapse:
         return urls
 
     async def getImages(self):
-        fileLIST = []
-        async with httpx.AsyncClient(timeout=None) as client:
-            tasks = (client.get(url) for url in self.urls)
-            reqs = await asyncio.gather(*tasks)
-
-        for i in reqs:
-            if i.status_code == 200:
-                ImageName = str(i.url).split("/")[-1]
-                with open(f"Images/{self.name}/{ImageName}", "wb") as file:
-                    file.write(i.content)
-                    fileLIST.append(f"Images/{self.name}/{ImageName}")
-        return fileLIST
+        fileIndex = 0
+        # Breaking the downloads into chunks for stability and less ram usage
+        n = 850
+        chunks = [
+            self.urls[i * n : (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)
+        ]
+        for i, chunk in enumerate(chunks):
+            while True:
+                try:
+                    print(f"Downloading Chunk {i+1}/{len(chunks)}...")
+                    a = t.perf_counter()
+                    async with httpx.AsyncClient(timeout=None) as client:
+                        sub_tasks = (client.get(url) for url in chunk)
+                        requests = await asyncio.gather(*sub_tasks)
+                    print(
+                        f"Images downloaded in {t.perf_counter() - a} seconds\nWriting images into files..."
+                    )
+                    # mutating the list to contain only status code 200s, also, can't afford to create any copies here
+                    # which is why requests[:] and not just requests. Used to be a part of the for image in requests loop
+                    a = t.perf_counter()
+                    requests[:] = [i for i in requests if i.status_code == 200]
+                    print(
+                        "It took ", t.perf_counter() - a, " to remove the bad requests."
+                    )
+                    a = t.perf_counter()
+                    for image in requests:
+                        ImageName = f"{self.type_}_{fileIndex}.jpg"
+                        with open(f"Images/{self.name}/{ImageName}", "wb") as file:
+                            file.write(image.content)
+                        fileIndex += 1
+                    requests.clear()
+                    print(
+                        "Done!",
+                        t.perf_counter() - a,
+                        " seconds to write all the images into files.",
+                        requests,
+                    )
+                except httpx.ConnectError:
+                    print("ConnectError encountered, trying again...")
+                    continue
+                break
 
     def video(self):
-        image_list = []
-        image_files = asyncio.run(self.getImages())
-
-        for image in image_files:
-            img = cv2.imread(image)
-            image_list.append(img)
-        height, width = image_list[0].shape[0:2]
-        size = (width, height)
-        out = cv2.VideoWriter(
-            f"Videos/{self.name}.avi",
-            cv2.VideoWriter_fourcc(*"DIVX"),
-            self.frame_rate,
-            size,
+        asyncio.run(self.getImages())
+        # using ffmpeg instead of OpenCV because OpenCV videos are too big,
+        # and they take up far too much ram and its too slow
+        os.system(
+            f'ffmpeg -framerate {self.frame_rate} -i ./Images/{self.name}/{self.type_}_%d.jpg -vf "pad=ceil(iw/2)*2:ceil'
+            f'(ih/2)*2" -vcodec libx264 -y -an ./Videos/{self.name}.mp4'
         )
-
-        print("Creating Video")
-        for image in image_list:
-            out.write(image)
-        out.release()
-        del out
-        del image_files
         print("DONE!")
 
 
@@ -111,7 +130,7 @@ async def preview(date, year, time, type_, file_name):
     Copy pasted from https://github.com/clodman84/AternosReborn/blob/master/space.py"""
     count = 0
     urls = []
-    mosdacString = 'https://mosdac.gov.in/look/3D_IMG/gallery'
+    mosdacString = "https://mosdac.gov.in/look/3D_IMG/gallery"
     if int(time[2:]) >= 30:
         time = str(int(time[0:2]) + 1) + "00"
         if len(time) == 3:
@@ -135,7 +154,9 @@ async def preview(date, year, time, type_, file_name):
             NEWtime = time[:-2] + "29"
         if len(NEWtime) == 3:
             NEWtime = "0" + NEWtime
-            url = f"{mosdacString}/{year}/{date}/3DIMG_{date}{year}_{NEWtime}_{type_}.jpg"
+            url = (
+                f"{mosdacString}/{year}/{date}/3DIMG_{date}{year}_{NEWtime}_{type_}.jpg"
+            )
             urls.append(url)
 
     async with httpx.AsyncClient(timeout=None) as client:
