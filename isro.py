@@ -2,7 +2,7 @@ import httpx
 import asyncio
 from datetime import datetime, timedelta
 import os
-import time as t
+from subprocess import run
 
 
 class TimeLapse:
@@ -38,12 +38,7 @@ class TimeLapse:
         urls = []
         mosdacString = "https://mosdac.gov.in/look/3D_IMG/gallery"
         print("Creating URLs")
-        for (
-            d
-        ) in (
-            self.dateList
-        ):  # looping through each day in the date-list created to generate urls
-            print(d)
+        for d in self.dateList:  # looping through each day in the date-list created to generate urls
             time = "0000"
             date = d.strftime("%d%b").upper()
             year = d.strftime("%Y")
@@ -75,41 +70,24 @@ class TimeLapse:
         fileIndex = 0
         # Breaking the downloads into chunks for stability and less ram usage
         n = 850
-        chunks = [
-            self.urls[i * n : (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)
-        ]
+        chunks = [self.urls[i * n: (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)]
         for i, chunk in enumerate(chunks):
             while True:
                 try:
                     print(f"Downloading Chunk {i+1}/{len(chunks)}...")
-                    a = t.perf_counter()
                     async with httpx.AsyncClient(timeout=None) as client:
                         sub_tasks = (client.get(url) for url in chunk)
                         requests = await asyncio.gather(*sub_tasks)
-                    print(
-                        f"Images downloaded in {t.perf_counter() - a} seconds\nWriting images into files..."
-                    )
-                    # mutating the list to contain only status code 200s, also, can't afford to create any copies here
-                    # which is why requests[:] and not just requests. Used to be a part of the for image in requests loop
-                    a = t.perf_counter()
-                    requests[:] = [i for i in requests if i.status_code == 200]
-                    print(
-                        "It took ", t.perf_counter() - a, " to remove the bad requests."
-                    )
-                    a = t.perf_counter()
+
+                    requests[:] = [i for i in requests if i.status_code == 200]     # filtering out all failed requests
+
                     for image in requests:
                         ImageName = f"{self.type_}_{fileIndex}.jpg"
                         with open(f"Images/{self.name}/{ImageName}", "wb") as file:
                             file.write(image.content)
                         fileIndex += 1
                     requests.clear()
-                    print(
-                        "Done!",
-                        t.perf_counter() - a,
-                        " seconds to write all the images into files.",
-                        requests,
-                    )
-                except httpx.ConnectError:
+                except httpx.ConnectError:      # random error \_(o_o)_/
                     print("ConnectError encountered, trying again...")
                     continue
                 break
@@ -118,10 +96,10 @@ class TimeLapse:
         asyncio.run(self.getImages())
         # using ffmpeg instead of OpenCV because OpenCV videos are too big,
         # and they take up far too much ram and its too slow
-        os.system(
-            f'ffmpeg -framerate {self.frame_rate} -i ./Images/{self.name}/{self.type_}_%d.jpg -vf "pad=ceil(iw/2)*2:ceil'
-            f'(ih/2)*2" -vcodec libx264 -y -an ./Videos/{self.name}.mp4'
-        )
+        print('Generating Video...')
+        args = ['ffmpeg', '-loglevel', 'quiet','-stats', '-framerate', str(self.frame_rate), '-i', f'./Images/{self.name}/{self.type_}_%d.jpg', '-vf',
+                'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-vcodec', 'libx264', '-y', '-an', f'./Videos/{self.name}.mp4']
+        run(args=args)
         print("DONE!")
 
 

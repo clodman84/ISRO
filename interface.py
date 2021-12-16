@@ -1,17 +1,19 @@
-from tkinter import Tk, Label, StringVar, Button, Entry, OptionMenu, Spinbox, Toplevel, IntVar, Canvas
+from tkinter import Tk, Label, StringVar, Button, Entry, OptionMenu, Spinbox, Toplevel, IntVar, Canvas, Text, END
 from tkcalendar import Calendar
 from datetime import datetime
 from functools import partial
 from PIL import ImageTk, Image
 import isro
 import asyncio
+import threading
+import sys
 
 
 class EntryWindow:
     def __init__(self):
         """The window where people enter values, can be better, could be a frame, but I am not in the mood."""
         self.root = Tk()
-        self.root.geometry("380x450")
+        self.root.geometry("800x450")
         self.root.resizable(False, False)
         self.root.title('Time-Lapse')
         self.font = ("Arial", 12)
@@ -46,6 +48,12 @@ class EntryWindow:
         self.calendar.place(x=20, y=250)
         Button(self.root, text='Preview', font=self.font, command=self.preview).place(x=20, y=210)
         Button(self.root, text='Run', font=self.font, command=self.make_vid).place(x=230, y=210)
+        console_out = Text(self.root, state='disabled', height=25, width=52)
+        console_out.place(x=360, y=20)
+        # redirecting everything into the textbox
+        redirect = StdoutRedirect(console_out)
+        sys.stdout = redirect
+        sys.stderr = redirect
 
     def get_date(self, index, y):
         var_ = self.calendar.get_date()
@@ -116,9 +124,30 @@ class EntryWindow:
     def make_vid(self):
         if self.get_settings():
             video = isro.TimeLapse(*self.settings)
-            video.video()
+            t1 = threading.Thread(target=video.video)
+            t1.start()
         else:
             self.show_error(msg='You have not entered all the values yet')
+
+
+class StdoutRedirect:
+    def __init__(self, text_widget):
+        self.text_space = text_widget
+
+    def write(self, string):
+        self.text_space.configure(state='normal')
+        self.text_space.insert(END, string)
+        self.text_space.configure(state='disabled')
+        self.text_space.see(END)
+
+    def fileno(self):
+        return 0
+
+    def close(self):
+        pass
+
+    def flush(self):
+        pass
 
 
 if __name__ == '__main__':
