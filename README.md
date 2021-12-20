@@ -3,14 +3,14 @@
     <img src="https://github.com/clodman84/ISRO/blob/main/demos/demo1.gif" />
 </p>
 
-## How to Use
+## How to install
 <p align='center'>
     <img src='https://github.com/clodman84/ISRO/blob/main/demos/Interface.png'>
 </p>
 
-1. Install FFMPEG and make sure it is in your system path, this program uses ffmpeg to stitch together the frames.
-2. Run interface.py
-3. The interface is fairly straightforward, but you can watch the How2Use.mp4 to get an idea
+Download TimeLapse.rar from the [releases](https://github.com/clodman84/ISRO/releases), extract it and run interface.exe
+
+If you are downloading the code directly, run interface.py, make sure that ffmpeg is installed and it is in your system path.
 
 ## How it works
 
