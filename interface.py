@@ -7,19 +7,21 @@ import isro
 import asyncio
 import threading
 import sys
+import Database
 
 
 class EntryWindow:
     def __init__(self):
         """The window where people enter values, can be better, could be a frame, but I am not in the mood."""
         self.root = Tk()
-        self.root.geometry("800x450")
+        self.root.geometry("880x450")
         self.root.resizable(False, False)
         self.root.title('Time-Lapse')
         self.font = ("Arial", 12)
-        self.settings = [None, None, None, None, 24]
+        self.settings = [None, None, None, None, 24]        # [video-name, start-date, end-date, type, frame-rate]
         self.calendar = None
         self.fields = []
+        self.db = Database.Database()
         self.setScreen()
 
     def setScreen(self):
@@ -46,9 +48,10 @@ class EntryWindow:
         self.calendar = Calendar(self.root, selectmode='day', year=now.year, month=now.month, day=now.day,
                                  date_pattern='dd-mm-y')
         self.calendar.place(x=20, y=250)
-        Button(self.root, text='Preview', font=self.font, command=self.preview).place(x=20, y=210)
+        Button(self.root, text='Preview', font=self.font, command=self.previewThread).place(x=20, y=210)
         Button(self.root, text='Run', font=self.font, command=self.make_vid).place(x=230, y=210)
-        console_out = Text(self.root, state='disabled', height=25, width=52)
+        Button(self.root, text='Show Data', font=self.font, command=self.showTable).place(x=130, y=210)
+        console_out = Text(self.root, state='disabled', height=25, width=63)
         console_out.place(x=360, y=20)
         # redirecting everything into the textbox
         redirect = StdoutRedirect(console_out)
@@ -63,8 +66,16 @@ class EntryWindow:
     def show_error(self, msg):
         newWindow = Toplevel(self.root)
         newWindow.title("Error")
-        Label(newWindow,
-              text=msg).pack()
+        Label(newWindow, text=msg).pack()
+
+    def showTable(self):
+        for i in self.db.displayData():
+            print(i)
+
+    def previewThread(self):
+        print("Loading preview images...")
+        t1 = threading.Thread(target=self.preview)
+        t1.start()
 
     def preview(self):
         if not self.get_settings():
@@ -76,7 +87,7 @@ class EntryWindow:
             d = datetime.strptime(date_string, "%d-%m-%Y")
             date = d.strftime("%d%b").upper()
             year = d.strftime("%Y")
-            a = asyncio.run(isro.preview(date, year, '1200', self.settings[3], i))
+            a = asyncio.run(isro.preview(date, year, self.settings[3], i))
             if a:
                 img = Image.open(f"{i}.jpg")
                 img = img.resize((500, 500))
@@ -98,7 +109,7 @@ class EntryWindow:
 
         def changeImage():
             nonlocal index, image_list, canvas
-            if index < len(image_list)-1:
+            if index < len(image_list) - 1:
                 index += 1
             else:
                 index = 0
@@ -106,6 +117,7 @@ class EntryWindow:
             canvas.create_image(0, 0, image=img, anchor='nw')
 
         Button(preview_Window, text='Toggle', command=changeImage).place(x=430, y=450)
+        print("Preview Images Loaded!")
 
     def get_settings(self):
         name = self.fields[0].get()
