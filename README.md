@@ -1,14 +1,18 @@
-#INSAT-3D Timelapse Generator
+# INSAT-3D Timelapse Generator
+<p align='center'>
+    <img src="https://github.com/clodman84/ISRO/blob/main/demos/demo1.gif" />
+</p>
 
-![image](demos/demo1.gif)
+## How to install
+<p align='center'>
+    <img src='https://github.com/clodman84/ISRO/blob/main/demos/Interface.png'>
+</p>
 
-##How to Use
+Download TimeLapse.rar from the [releases](https://github.com/clodman84/ISRO/releases), extract it and run interface.exe
 
-1. Install FFMPEG and make sure it is in your system path, this program uses ffmpeg to stitch together the frames.
-2. Run interface.py
-3. The interface is fairly straightforward, but you can watch the How2Use.mp4 to get an idea
+If you are downloading the code directly, run interface.py, make sure that ffmpeg is installed and it is in your system path.
 
-##How it works
+## How it works
 
 The image urls on the [Mosdac Gallery](https://www.mosdac.gov.in/gallery/index.html) follow a pattern, this program
 generates the urls and then downloads them. After that it stitches the downloaded images together with ffmpeg to make a video.
