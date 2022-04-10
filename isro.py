@@ -15,9 +15,7 @@ class TimeLapse:
         self.frame_rate = frame_rate
         start = datetime.strptime(start_date, "%d-%m-%Y")
         end = datetime.strptime(end_date, "%d-%m-%Y")
-        self.dateList = [
-            start + timedelta(days=x) for x in range(0, (end - start).days)
-        ]
+        self.dateList = [start + timedelta(days=x) for x in range((end - start).days)]
         self.urls = self.generateURLS()
         self.createDir()
         self.fileIndex = 0  # made this a class variable for the database thing
@@ -29,9 +27,7 @@ class TimeLapse:
         else:
             os.makedirs(f"Images/{self.name}")
 
-        if os.path.isdir("Videos"):
-            pass
-        else:
+        if not os.path.isdir("Videos"):
             os.mkdir("Videos")
         print("Folders Created!")
 
@@ -45,12 +41,9 @@ class TimeLapse:
 
             date = d.strftime("%d%b").upper()
             year = d.strftime("%Y")
-            for hour in range(0, 23):
+            for hour in range(23):
                 # increments the time by 30 minutes
-                if hour < 10:
-                    hour = "0" + str(hour)
-                else:
-                    hour = str(hour)
+                hour = f"0{str(hour)}" if hour < 10 else str(hour)
                 for minute in minutes:
                     time = hour + minute
                     url = f"{mosdacString}/{year}/{date}/3DIMG_{date}{year}_{time}_{self.type_}.jpg"
@@ -109,12 +102,9 @@ async def preview(date, year, type_, file_name):
     urls = []
     mosdacString = "https://mosdac.gov.in/look/3D_IMG/preview"
 
-    for hour in range(0, 4):
+    for hour in range(4):
         # increments the time by 30 minutes
-        if hour < 10:
-            hour = "0" + str(hour)
-        else:
-            hour = str(hour)
+        hour = f"0{str(hour)}" if hour < 10 else str(hour)
         for minute in minutes:
             time = hour + minute
             url = f"{mosdacString}/{year}/{date}/3DIMG_{date}{year}_{time}_{type_}.jpg"
