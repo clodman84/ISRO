@@ -14,5 +14,4 @@ If you are downloading the code directly, run interface.py, make sure that ffmpe
 
 ## How it works
 
-The image urls on the [Mosdac Gallery](https://www.mosdac.gov.in/gallery/index.html) follow a pattern, this program
-generates the urls and then downloads them. After that it stitches the downloaded images together with ffmpeg to make a video.
+Downloads images from the [Mosdac Gallery](https://www.mosdac.gov.in/gallery/index.html) and uses ffmpeg to create the video.
