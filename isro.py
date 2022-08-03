@@ -3,7 +3,6 @@ import asyncio
 from datetime import datetime, timedelta
 import os
 from subprocess import run
-import Database
 
 
 class TimeLapse:
@@ -84,13 +83,6 @@ class TimeLapse:
                 f'./Images/{self.name}/{self.type_}_%d.jpg', '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-vcodec',
                 'libx264', '-y', '-an', f'./Videos/{self.name}.mp4']
         run(args=args)
-        print('Adding Run to Database...')
-        start = self.dateList[0].strftime("%Y-%m-%d")
-        end = self.dateList[-1].strftime("%Y-%m-%d")
-        img_no = len(self.dateList) * 48
-        record = self.fileIndex
-        db = Database.Database()
-        db.recordData(self.type_, img_no, record, start, end)
         print("DONE!")
 
 
