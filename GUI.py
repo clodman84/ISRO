@@ -1,5 +1,4 @@
 import dearpygui.dearpygui as dpg
-import dearpygui.demo as demo
 from GUI_Elements import Logger, Explorer, DataEntry
 import logging
 

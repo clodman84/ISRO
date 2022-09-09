@@ -6,6 +6,7 @@ import re
 from datetime import datetime
 import threading
 import isro
+import asyncio
 
 logger = logging.getLogger("ISRO.GUI")
 ModalHiddenList = []
@@ -31,17 +32,21 @@ def modalMessage(message):
 class DataEntry:
     def __init__(self, parent):
         self.window_id = parent
+        self.thread_running = False
         dpg.add_input_text(label="Video Name", width=300, tag="name")
 
         types = ("L1C_ASIA_MER_BIMG", "L1C_ASIA_MER_BIMG_KARNATAKA", "L1C_SGP_3D_IR1", "L1C_SGP_DMP", "L1C_SGP_NMP",
-                 "L1C_ASIA_MER_RGB", "L1C_SGP_RGB",
-                 "L1B_STD_IR1", "L1B_STD_IR2", "L1B_STD_MIR", "L1B_STD_WV", "L1B_STD_VIS", "L1B_STD_SWIR",
-                 "L1B_STD_BT_IR1_TEMP")
+                 "L1C_ASIA_MER_RGB", "L1C_SGP_RGB", "L1B_STD_IR1", "L1B_STD_IR2", "L1B_STD_MIR", "L1B_STD_WV",
+                 "L1B_STD_VIS", "L1B_STD_SWIR", "L1B_STD_BT_IR1_TEMP")
         dpg.add_combo(types, label="Product", tag="product", width=300)
         with dpg.tooltip(dpg.last_item()):
             dpg.add_text("This is the type of image you want to generate.")
 
-        dpg.add_input_int(label="framerate", tag="framerate", width=300, default_value=24)
+        dpg.add_input_int(label="Framerate", tag="framerate", width=300, default_value=24)
+        dpg.add_input_int(label="Chunk Size", tag="chunk_size", width=300, default_value=850)
+        with dpg.tooltip(dpg.last_item()):
+            dpg.add_text("The number of images that will be downloaded in parallel. "
+                         "Higher is faster, lower is more stable")
         dpg.add_separator()
 
         now = datetime.now()
@@ -53,10 +58,20 @@ class DataEntry:
         dpg.add_separator()
 
         with dpg.group(horizontal=True):
-            dpg.add_button(label="Run", callback=self.run, width=75)
+            dpg.add_button(label="Run", callback=self.run, width=80)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text("Click to make generate timelapse.")
+
+            dpg.add_button(label="Preview", callback=self.preview, width=80)
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text("Click to view the first and last image of the timelapse.")
+
+            dpg.add_button(label="Terminate", callback=lambda: None, width=80, show=False, tag="terminate")
+            with dpg.tooltip(dpg.last_item()):
+                dpg.add_text("Click to terminate image download.")
 
     def validate(self):
-        valid = [False, False, False]  # [name, dates, prod], True if the values are valid
+        valid = [False, False, False, False]  # [name, dates, prod, chunk_size], True if the values are valid
         if self.name != '':
             valid[0] = True
         else:
@@ -74,19 +89,52 @@ class DataEntry:
             valid[2] = True
         else:
             logger.error("Please select a product.")
-        return all(valid)
+
+        if self.chunk_size > 0:
+            valid[3] = True
+        else:
+            logger.error("Chunk size cannot be zero.")
+
+        if all(valid):
+            logger.info("All inputs are valid!")
+            return True
+        else:
+            modalMessage("Something is wrong with the values you entered.\n\nCheck the logs on the right.")
+            return False
 
     def get_settings(self):
-        return self.name, *self.dates, self.prod, self.framerate
+        return self.name, *self.dates, self.prod, self.framerate, self.chunk_size
 
     def run(self):
-        if not self.validate():
-            modalMessage("Something is wrong with the values you entered.\n\nCheck the logs on the right.")
+        if self.thread_running:
+            logger.error("A video is already being made...")
             return
-        logger.info("All inputs are valid!")
+
+        if not self.validate():
+            return
         video = isro.TimeLapse(*self.get_settings())
-        vid_thread = threading.Thread(target=video.video)
+        vid_thread = threading.Thread(target=video.video, args=(lambda: self.thread_running,))
+        self.thread_running = True
+        vid_thread.daemon = True
         vid_thread.start()
+
+        def terminate_process():
+            if vid_thread.is_alive():
+                logger.debug("Terminating Process...")
+                self.thread_running = False
+                vid_thread.join()
+            dpg.hide_item("terminate")
+
+        dpg.show_item("terminate")
+        dpg.configure_item("terminate", callback=terminate_process)
+
+    def preview(self):
+        if not self.validate():
+            return
+        images = isro.TimeLapse("Preview", *self.get_settings()[1:])
+        images.urls = [images.urls[1], images.urls[-1]]
+        asyncio.run(images.getImages(lambda: True))
+        ImageWindow(".\\Images\\Preview\\")
 
     @property
     def name(self):
@@ -110,6 +158,10 @@ class DataEntry:
     @property
     def framerate(self):
         return dpg.get_value("framerate")
+
+    @property
+    def chunk_size(self):
+        return dpg.get_value("chunk_size")
 
 
 class ImageWindow:
