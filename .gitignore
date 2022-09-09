@@ -2,3 +2,5 @@ Images/
 Videos/
 __pycache__/
 imgui.ini
+/build/
+/setup.py
