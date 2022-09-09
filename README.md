@@ -1,8 +1,8 @@
 # INSAT-3D Timelapse Generator
-![demo timelapse](.\demos\demo.gif)
+![demo timelapse](https://github.com/clodman84/ISRO/blob/main/demos/demo.gif)
 
 ## How to install
-![GUI](.\demos\gui.png)
+![GUI](https://github.com/clodman84/ISRO/blob/main/demos/gui.png)
 
 Download TimeLapse.rar from the [releases](https://github.com/clodman84/ISRO/releases), extract it and run interface.exe
 
