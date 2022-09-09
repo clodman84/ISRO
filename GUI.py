@@ -3,10 +3,10 @@ from GUI_Elements import Logger, Explorer, DataEntry
 import logging
 
 dpg.create_context()
-dpg.create_viewport(title='Timelapse Generator', width=896, height=600)
-AppLog = logging.getLogger('ISRO')
+dpg.create_viewport(title="Timelapse Generator", width=896, height=600)
+AppLog = logging.getLogger("ISRO")
 AppLog.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
 
 with dpg.window(tag="Primary Window"):
     with dpg.group(horizontal=True):
@@ -24,8 +24,8 @@ with dpg.window(tag="Primary Window"):
 
 def resizeWindows():
     width, height = dpg.get_item_rect_size("Primary Window")
-    dpg.configure_item(loggerWindow, height=height/2)
-    dpg.configure_item(dataWindow, width=width/2)
+    dpg.configure_item(loggerWindow, height=height / 2)
+    dpg.configure_item(dataWindow, width=width / 2)
 
 
 with dpg.item_handler_registry(tag="resizeHandler"):
