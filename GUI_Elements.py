@@ -150,7 +150,8 @@ class DataEntry:
 
     def run(self):
         if self.thread_running:
-            logger.error("A video is already being made...")
+            logger.error("A video is already being made...(if it isn't, just click the terminate button, its something "
+                         "I will fix later.))")
             return
 
         if not self.validate():
@@ -164,9 +165,9 @@ class DataEntry:
         vid_thread.start()
 
         def terminate_process():
+            self.thread_running = False
             if vid_thread.is_alive():
                 logger.debug("Terminating Process...")
-                self.thread_running = False
                 vid_thread.join()
             dpg.hide_item("terminate")
 
