@@ -179,6 +179,7 @@ class DataEntry:
             return
         images = isro.TimeLapse("Preview", *self.get_settings()[1:])
         images.urls = [images.urls[1], images.urls[-1]]
+        images.prod = "preview"
         asyncio.run(images.getImages(lambda: True))
         ImageWindow(".\\Images\\Preview\\")
 
