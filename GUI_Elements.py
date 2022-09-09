@@ -218,12 +218,12 @@ class ImageWindow:
 class Explorer:
     def __init__(self, parent):
         self.window_id = parent
-        dpg.add_button(label='Refresh', callback=lambda: self._loadDirectories(), parent=self.window_id)
+        self.table = None
+        dpg.add_button(label='Refresh', callback=self._loadDirectories, parent=self.window_id)
         imageFolders = []
         if os.path.isdir('.\\Images'):
             imageFolders = os.listdir('.\\Images')
         if not imageFolders:
-            dpg.delete_item('ExpWindow')
             logger.warning("No image folders were found.")
             with dpg.child_window(parent=self.window_id, autosize_x=True, autosize_y=True, tag='ExpWindow'):
                 dpg.add_text("Make some videos and they will appear here.", wrap=0)
@@ -249,12 +249,12 @@ class Explorer:
             imageFolders = os.listdir('.\\Images')
         if not imageFolders:
             dpg.delete_item('ExpWindow')
-            logger.warning("No image folder were found.")
+            logger.warning("No image folders were found.")
             with dpg.child_window(parent=self.window_id, autosize_x=True, autosize_y=True, tag='ExpWindow'):
                 dpg.add_text("Make some videos and they will appear here.", wrap=0)
             return
-
-        dpg.delete_item(self.table)
+        if self.table:
+            dpg.delete_item(self.table)
         with dpg.table(label=None, parent="ExpWindow", header_row=False, row_background=True, borders_innerH=True,
                        borders_outerH=True, borders_innerV=True, borders_outerV=True, delay_search=True) as self.table:
             dpg.add_table_column(width_fixed=True)

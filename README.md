@@ -4,8 +4,6 @@
 ## How to install
 ![GUI](https://github.com/clodman84/ISRO/blob/main/demos/gui.png)
 
-Download TimeLapse.rar from the [releases](https://github.com/clodman84/ISRO/releases), extract it and run interface.exe
-
 If you want to execute the code run GUI.py, make sure that ffmpeg is installed.
 Python 3.10.
 ## How it works
