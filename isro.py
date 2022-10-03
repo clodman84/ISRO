@@ -1,8 +1,8 @@
+import subprocess
 import httpx
 import asyncio
 from datetime import datetime
 import os
-from subprocess import run
 import logging
 from typing import Callable
 
@@ -11,22 +11,22 @@ logger = logging.getLogger("ISRO.Generator")
 
 class TimeLapse:
     def __init__(
-        self,
-        name: str,
-        start_date: datetime,
-        end_date: datetime,
-        prod: str,
-        frame_rate=24,
-        chunk_size=850,
+            self,
+            name: str,
+            start_date: datetime,
+            end_date: datetime,
+            prod: str,
+            frame_rate=24,
+            chunk_size=850,
     ):
         self.name = name  # name of the video
         self.prod = prod  # "L1C_ASIA_MER_BIMG","L1C_ASIA_MER_BIMG_KARNATAKA", etc
         self.frame_rate = frame_rate
         self.chunk_size = chunk_size
-        self.start = start_date.replace(hour=0)
-        self.end = end_date.replace(
-            hour=23
-        )  # time goes forward and the past was the beginning
+        self.start = start_date.replace(
+            hour=0
+        )  # time goes forward and the past was the beginning, start < end
+        self.end = end_date.replace(hour=23)
         self.urls = self.getURLS()
         self.createDir()
         self.fileIndex = 0
@@ -48,22 +48,17 @@ class TimeLapse:
     def getURLS(self):
         logger.info("Getting URLs!")
         mosdacString = "https://mosdac.gov.in/look/"
-        smh = "\n"
         start_time = self.start.strftime("%d%b%Y").upper()
         end_time = self.end.strftime("%Y-%m-%d")
         count = (self.end - self.start).total_seconds() / 1800
-        count = (
-            48 if count == 0 else count
-        )  # potential for having minute-level granularity in the future
         json = {
             "prod": f"3DIMG_*_{self.prod}_V*.jpg",
             "st_date": end_time,
             "count": count,
         }
         logger.debug(
-            f"URL Parameters - \nStart: {start_time}\nEnd: {end_time}\nCount: {count}\nProd: {json['prod']}"
+            f"URL Parameters - \n\tStart: {start_time}\n\tEnd: {end_time}\n\tCount: {count}\n\tProd: {json['prod']}"
         )
-
         try:
             data = httpx.post(
                 "https://www.mosdac.gov.in/gallery/getImage.php", json=json
@@ -78,58 +73,49 @@ class TimeLapse:
         index = 0 if index == -1 else index
         data = data[index:]
         urls = [mosdacString + url for url in data.split(",")]
-        logger.debug(f"Length of URL-list = {len(urls)},\nSample:\n{smh.join(urls[:2])}")
-        logger.info("Received and Parsed URLs!")
+        logger.debug(
+            f"Length of URL-list = {len(urls)}\nSample:\n\t{urls[0]}"
+        )
+        logger.info(f"Received and Parsed {len(urls)} URLs!")
         return urls
 
-    async def getImages(self, continue_running: Callable):
+    async def getImages(self, proceed: Callable = lambda: True):
         # Breaking the downloads into chunks
         n = self.chunk_size
         chunks = [
-            self.urls[i * n : (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)
+            self.urls[i * n: (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)
         ]
-        for i, chunk in enumerate(chunks):
-            while True:
-                if not continue_running():
-                    # find a better way to do this. This paints the terminal red.
-                    logger.warning("Stopped Downloading Images...")
-                    return
-                try:
-                    logger.info(f"Downloading Chunk {i + 1}/{len(chunks)}...")
-                    async with httpx.AsyncClient(timeout=None) as client:
+        async with httpx.AsyncClient(timeout=None) as client:
+            for i, chunk in enumerate(chunks):
+                while True:
+                    if not proceed():
+                        logger.info(f"Image download cancelled! Making video with {i} downloaded chunks.")
+                        await client.aclose()
+                        return
+                    try:
+                        logger.info(f"Downloading Chunk {i + 1}/{len(chunks)}...")
                         sub_tasks = (client.get(url) for url in chunk)
                         requests = await asyncio.gather(*sub_tasks)
-                    logger.debug(f"Received chunk {i + 1}")
-                    requests = [
-                        i for i in requests if i.status_code == 200
-                    ]  # filtering out all failed requests
-                    logger.debug("Failed requests filtered.")
-                    for image in requests:
-                        ImageName = f"{self.prod}_{self.fileIndex}.jpg"
-                        logger.debug(f"Writing file {ImageName}")
-                        with open(f"Images/{self.name}/{ImageName}", "wb") as file:
-                            file.write(image.content)
-                        self.fileIndex += 1
+                        logger.debug(f"Received chunk {i + 1}")
+                        requests = [i for i in requests if i.status_code == 200]
+                        logger.debug("Failed requests filtered.")
+                        self.writeImages(requests)
 
-                except httpx.ConnectError as e:  # random error \_(o_o)_/
-                    logger.error(
-                        f"{e}, (If the problem persists try reducing your chunk size). Trying again..."
-                    )
-                    continue
-                except RuntimeError as e:
-                    logger.error(
-                        f"{e}, (If the problem persists try reducing your chunk size). Trying again..."
-                    )
-                    continue
-                except Exception as e:
-                    logger.error(f"{e}")
-                break
+                    except Exception as e:
+                        logger.error(
+                            f"{e}, (If the problem persists try reducing your chunk size). Trying again..."
+                        )
+                    break
 
-    def video(self, continue_running: Callable):
-        asyncio.run(self.getImages(continue_running))
-        if not continue_running():
-            logger.warning("Stopped Video Generation...")
-            return
+    def writeImages(self, imageList):
+        for image in imageList:
+            ImageName = f"{self.prod}_{self.fileIndex}.jpg"
+            logger.debug(f"Writing file {ImageName}")
+            with open(f"Images/{self.name}/{ImageName}", "wb") as file:
+                file.write(image.content)
+            self.fileIndex += 1
+
+    def makeVideo(self):
         logger.info("Generating Video...")
         args = [
             "ffmpeg",
@@ -148,5 +134,12 @@ class TimeLapse:
             "-an",
             f"./Videos/{self.name}.mp4",
         ]
-        run(args=args)
-        logger.info("Done!")
+        process = subprocess.Popen(args)
+        out = process.wait()
+        logger.info(f"Done! Exit code - {out}")
+
+    def run(self, proceed: Callable, onCompletion: Callable):
+        asyncio.run(self.getImages(proceed))
+        self.makeVideo()
+        onCompletion()
+

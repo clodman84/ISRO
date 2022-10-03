@@ -10,7 +10,7 @@ To run from code:
 * Python 3.10
 * `pip install -r requirements.txt`
 * Make sure that ffmpeg is installed
-* Run GUI.py
+* Run main.py
 
 ## How it works
 

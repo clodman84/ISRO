@@ -1,15 +1,24 @@
+import threading
+
 import dearpygui.dearpygui as dpg
 import os
 import logging
 from glob import glob
 import re
 from datetime import datetime
-import threading
 import isro
 import asyncio
 
 logger = logging.getLogger("ISRO.GUI")
 ModalHiddenList = []
+
+# TODO: Write Docstrings
+# TODO: Do a code review over the entire thing
+# TODO: Add support for every product on MOSDAC
+# TODO: Add multi-satellite support
+# TODO: Add an image only mode
+# TODO: Make the terminate button better
+# TODO: Write tests
 
 
 def modalMessage(message):
@@ -39,7 +48,7 @@ def modalMessage(message):
 class DataEntry:
     def __init__(self, parent):
         self.window_id = parent
-        self.thread_running = False
+        self.running = False
         dpg.add_input_text(label="Video Name", width=300, tag="name")
 
         types = (
@@ -103,8 +112,6 @@ class DataEntry:
                 show=False,
                 tag="terminate",
             )
-            with dpg.tooltip(dpg.last_item()):
-                dpg.add_text("Click to terminate image download.")
 
     def validate(self):
         valid = [
@@ -149,30 +156,26 @@ class DataEntry:
         return self.name, *self.dates, self.prod, self.framerate, self.chunk_size
 
     def run(self):
-        if self.thread_running:
-            logger.error("A video is already being made...(if it isn't, just click the terminate button, its something "
-                         "I will fix later.))")
+        if self.running:
+            logger.error("A video is already being made!")
             return
 
         if not self.validate():
             return
         video = isro.TimeLapse(*self.get_settings())
-        vid_thread = threading.Thread(
-            target=video.video, args=(lambda: self.thread_running,)
-        )
-        self.thread_running = True
-        vid_thread.daemon = True
-        vid_thread.start()
+        self.running = True
 
         def terminate_process():
-            self.thread_running = False
-            if vid_thread.is_alive():
-                logger.debug("Terminating Process...")
-                vid_thread.join()
+            logger.debug("Process Terminated!")
+            self.running = False
             dpg.hide_item("terminate")
 
         dpg.show_item("terminate")
         dpg.configure_item("terminate", callback=terminate_process)
+
+        videoThread = threading.Thread(target=video.run, args=(lambda: self.running, terminate_process))
+        videoThread.daemon = True
+        videoThread.start()
 
     def preview(self):
         if not self.validate():
@@ -180,7 +183,7 @@ class DataEntry:
         images = isro.TimeLapse("Preview", *self.get_settings()[1:])
         images.urls = [images.urls[1], images.urls[-1]]
         images.prod = "preview"
-        asyncio.run(images.getImages(lambda: True))
+        asyncio.run(images.getImages())
         ImageWindow(".\\Images\\Preview\\")
 
     @property
@@ -194,7 +197,7 @@ class DataEntry:
         data = []
         for d in ("start", "end"):
             val: dict = dpg.get_value(d)
-            year = val["year"] + 1900  # years are measured from 1900
+            year = val["year"] + 1900  # years dpg date picker are measured from 1900
             month = val["month"] + 1
             day = val["month_day"]
             data.append(datetime(year, month, day))
@@ -451,6 +454,7 @@ class Logger(logging.Handler):
             theme = self.warning_theme
         elif level == 40:
             theme = self.error_theme
+            modalMessage(message)
         elif level == 50:
             theme = self.critical_theme
 
