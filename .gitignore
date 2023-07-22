@@ -4,3 +4,4 @@ __pycache__/
 imgui.ini
 /build/
 /setup.py
+/.venv/
