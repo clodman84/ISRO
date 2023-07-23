@@ -1,3 +1,4 @@
+anytree==2.9.0
 dearpygui==1.9.1
 httpx==0.24.1
 pre-commit==3.3.3
