@@ -39,10 +39,7 @@ class Downloader:
         the mosdac endpoint takes in an st_date parameter that is the last date of the images,
         and a count for the number of image URLs, this counts *back* from the end date,
         the number of images can vary for some reason, images can be missing, so just simply estimating
-        the count by looking at the time interval between images is not a complete solution.
-
-        The number of images is guaranteed, so we ask for a few more images than we expect, and just parse
-        the returned json and only keep the values that are after the start_date.
+        the count by looking at the time interval between images is not a complete solution
         """
 
         logger.info("Getting URLs!")
