@@ -1,18 +1,24 @@
+import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
+import product
 
 logger = logging.getLogger("Timelapse.Downloader")
 
+MOSDAC_STRING = "https://mosdac.gov.in/look/"
 
-class Product:
-    """
-    > Builds the product, at the end of the day this amounts to just a string, the whole "3D_IMG" thing.
-    """
 
-    def __init__(self):
-        ...
+@dataclass
+class ImageURL:
+    url_suffix: str
+    image_number: int
+
+    @property
+    def url(self):
+        return MOSDAC_STRING + self.url_suffix
 
 
 class Downloader:
@@ -24,15 +30,24 @@ class Downloader:
     """
 
     def __init__(
-        self, product: str, start_date: datetime, end_date: datetime, chunk_size=850
+        self,
+        client: httpx.AsyncClient,
+        name: str,
+        product: product.Product,
+        start_date: datetime,
+        end_date: datetime,
+        num_workers=25,
     ):
+        self.client = client
+
+        self.name = name
         self.product = product
         self.start_date = start_date
         self.end_date = end_date
-        self.chunk_size = chunk_size
-        self.urls = self.get_urls()
+        self.url_queue = asyncio.Queue()
+        self.num_workers = num_workers
 
-    def get_urls(self) -> list:
+    def get_urls(self):
         """
         gets a list of image urls, by calling a MOSDAC enpoint, which is fed to get_images().
 
@@ -43,13 +58,12 @@ class Downloader:
         """
 
         logger.info("Getting URLs!")
-        mosdac_string = "https://mosdac.gov.in/look/"
         start_time = self.start_date.strftime("%d%b%Y").upper()
         end_time = self.end_date.strftime("%Y-%m-%d")
         count = (self.end_date - self.start_date).total_seconds() / 1800
 
         json = {
-            "prod": f"3DIMG_*_{self.product}_V*.jpg",
+            "prod": self.product.pattern,
             "st_date": end_time,
             "count": count,
         }
@@ -70,37 +84,65 @@ class Downloader:
         logger.debug(f"Index of start date: {index}")
         index = 0 if index == -1 else index
         data = data[index:]
-        urls = [mosdac_string + url for url in data.split(",")]
-        logger.debug(f"Length of URL-list = {len(urls)}\nSample:\n\t{urls[0]}")
-        logger.info(f"Received and Parsed {len(urls)} URLs!")
-        return urls
 
-    async def get_images(self):
-        # Breaking the downloads into chunks
-        n = self.chunk_size
-        chunks = [
-            self.urls[i * n : (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)
-        ]
-        async with httpx.AsyncClient(timeout=None) as client:
-            for i, chunk in enumerate(chunks):
-                while True:
-                    if not proceed():
-                        logger.info(
-                            f"Image download cancelled! Making video with {i} downloaded chunks."
-                        )
-                        await client.aclose()
-                        return
-                    try:
-                        logger.info(f"Downloading Chunk {i + 1}/{len(chunks)}...")
-                        sub_tasks = (client.get(url) for url in chunk)
-                        requests = await asyncio.gather(*sub_tasks)
-                        logger.debug(f"Received chunk {i + 1}")
-                        requests = [i for i in requests if i.status_code == 200]
-                        logger.debug("Failed requests filtered.")
-                        self.writeImages(requests)
+        for index, url in enumerate(data.split(",")):
+            self.url_queue.put_nowait(ImageURL(url, index + 1))
 
-                    except Exception as e:
-                        logger.error(
-                            f"{e}, (If the problem persists try reducing your chunk size). Trying again..."
-                        )
-                    break
+    async def worker(self):
+        while True:
+            try:
+                await self.download_and_write_one_image()
+            except asyncio.CancelledError:
+                return
+
+    async def download_and_write_one_image(self):
+        url: ImageURL = await self.url_queue.get()
+        try:
+            response = await self.client.get(url.url)
+            filename = url.url_suffix.split("/")[-1]
+            with open(
+                f"Images/{self.name}/{url.image_number}-{filename}", "wb"
+            ) as file:
+                file.write(response.content)
+        except Exception as exc:
+            logger.error(exc)
+        finally:
+            self.url_queue.task_done()
+
+    async def run(self):
+        self.get_urls()
+        workers = [asyncio.create_task(self.worker()) for _ in range(self.num_workers)]
+        await self.url_queue.join()
+        for worker in workers:
+            worker.cancel()
+
+
+async def test(product: product.Product):
+    async with httpx.AsyncClient() as client:
+        start = datetime(2023, 7, 21)
+        end = datetime(2023, 7, 22)
+        downloader = Downloader(client, "Test", product, start, end)
+        await downloader.run()
+
+
+if __name__ == "__main__":
+    import os
+
+    import anytree
+
+    if os.path.isdir(f"Images/Test"):
+        logger.warning(f"Images/Test already exists, the files will be overwritten")
+    else:
+        os.makedirs(f"Images/Test")
+
+    if os.path.isdir("Videos"):
+        pass
+    else:
+        os.mkdir("Videos")
+    logger.info("Folders Created!")
+
+    resolver = anytree.Resolver()
+    path = "/Settings/INSAT-3D/IMAGER/Standard(Full Disk)/Shortwave Infrared"
+    settings_tree = product.make_settings_tree()
+    product = resolver.get(settings_tree, path)
+    asyncio.run(test(product))
