@@ -126,13 +126,13 @@ class Downloader:
                     f"{response.status_code} {response.reason_phrase} - {url.url}"
                 )
             else:
-                filename = url.url_suffix.split("/")[-1]
                 async with async_open(
-                    f"Images/{self.name}/{url.image_number}-{filename}", "wb"
+                    f"Images/{self.name}/{url.image_number}-{self.product.pattern}",
+                    "wb",
                 ) as file:
                     await file.write(response.content)
         except Exception as exc:
-            logger.error(str(exc))
+            logger.error(f"{exc.__class__.__name__} while working on {url.url}")
         finally:
             self.url_queue.task_done()
 
