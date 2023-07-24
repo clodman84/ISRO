@@ -1,8 +1,24 @@
+import logging
+
 import anytree
 import httpx
 
+logger = logging.getLogger("Timelapse.Products")
+
+
+class Product(anytree.Node):
+    """
+    meant to be the leaf nodes in the settings tree
+    idk just felt like it needed to be its own thing ¯\\_(ツ)_/¯
+    """
+
+    def __init__(self, *args, pattern: str, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.pattern = pattern
+
 
 def get_product_dict():
+    logger.info("GET-ting json of product types...")
     product_url = "https://www.mosdac.gov.in/gallery/product.json?v=0.4"
     response = httpx.get(url=product_url)
     return response.json()
@@ -16,9 +32,7 @@ def parse_dict_into_tree(dictionary: dict, parent: anytree.Node):
         elif isinstance(value, list):
             if key == "prodlist":
                 for item in value:
-                    anytree.Node(
-                        item["prod"], pattern=item["pat"], parent=new_parent_node
-                    )
+                    Product(item["prod"], pattern=item["pat"], parent=new_parent_node)
             else:
                 for item in value:
                     parse_dict_into_tree(item, parent=new_parent_node)
@@ -26,14 +40,17 @@ def parse_dict_into_tree(dictionary: dict, parent: anytree.Node):
             parse_dict_into_tree(value, parent=new_parent_node)
 
 
-def get_settings_tree():
+def make_settings_tree():
     settings = anytree.Node("Settings")
     products = get_product_dict()
+    logger.info("Building settings tree...")
     for satellite in products:
+        logger.debug(satellite["sat"])
         parse_dict_into_tree(satellite, parent=settings)
+    logger.info("Done")
     return settings
 
 
 if __name__ == "__main__":
-    tree = get_settings_tree()
+    tree = make_settings_tree()
     print(anytree.RenderTree(tree))

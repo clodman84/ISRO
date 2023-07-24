@@ -1,23 +1,24 @@
-import subprocess
-import httpx
 import asyncio
-from datetime import datetime
-import os
 import logging
+import os
+import subprocess
+from datetime import datetime
 from typing import Callable
+
+import httpx
 
 logger = logging.getLogger("ISRO.Generator")
 
 
 class TimeLapse:
     def __init__(
-            self,
-            name: str,
-            start_date: datetime,
-            end_date: datetime,
-            prod: str,
-            frame_rate=24,
-            chunk_size=850,
+        self,
+        name: str,
+        start_date: datetime,
+        end_date: datetime,
+        prod: str,
+        frame_rate=24,
+        chunk_size=850,
     ):
         self.name = name  # name of the video
         self.prod = prod  # "L1C_ASIA_MER_BIMG","L1C_ASIA_MER_BIMG_KARNATAKA", etc
@@ -73,9 +74,7 @@ class TimeLapse:
         index = 0 if index == -1 else index
         data = data[index:]
         urls = [mosdacString + url for url in data.split(",")]
-        logger.debug(
-            f"Length of URL-list = {len(urls)}\nSample:\n\t{urls[0]}"
-        )
+        logger.debug(f"Length of URL-list = {len(urls)}\nSample:\n\t{urls[0]}")
         logger.info(f"Received and Parsed {len(urls)} URLs!")
         return urls
 
@@ -83,13 +82,15 @@ class TimeLapse:
         # Breaking the downloads into chunks
         n = self.chunk_size
         chunks = [
-            self.urls[i * n: (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)
+            self.urls[i * n : (i + 1) * n] for i in range((len(self.urls) + n - 1) // n)
         ]
         async with httpx.AsyncClient(timeout=None) as client:
             for i, chunk in enumerate(chunks):
                 while True:
                     if not proceed():
-                        logger.info(f"Image download cancelled! Making video with {i} downloaded chunks.")
+                        logger.info(
+                            f"Image download cancelled! Making video with {i} downloaded chunks."
+                        )
                         await client.aclose()
                         return
                     try:
@@ -142,4 +143,3 @@ class TimeLapse:
         asyncio.run(self.getImages(proceed))
         self.makeVideo()
         onCompletion()
-
