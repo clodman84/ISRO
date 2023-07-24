@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
-import product
+import settings
 from aiofile import async_open
 
 logger = logging.getLogger("Timelapse.Downloader")
@@ -38,17 +38,20 @@ class ImageURL:
 
 class Downloader:
     """
-    > Gets the urls
-    > downloads them, based on some parameters that I haven't thought of yet
-    > Keeps all the async code in one place, and lets the GUI handle this better,
-        instead of the threading horrors that are in place rn.
+    Use .run() after instantiating.
+
+    - a queue of urls
+    - a worker function that keeps running .download_and_write_one_image() till it's task is cancelled.
+    - .download_and_write_one_image() takes one ImageURL from the queue and does what the name suggests.
+
+    The whole program is IO heavy so GET requests and writing to disk are done asynchronously.
     """
 
     def __init__(
         self,
         client: httpx.AsyncClient,
         name: str,
-        product: product.Product,
+        product: settings.Product,
         start_date: datetime,
         end_date: datetime,
         num_workers=25,
@@ -62,16 +65,16 @@ class Downloader:
         self.url_queue = asyncio.Queue()
         self.num_workers = num_workers
 
+        self.total_urls = 0
         prepare_directories(name)
 
     def get_urls(self):
         """
-        gets a list of image urls, by calling a MOSDAC enpoint, which is fed to get_images().
-
-        the mosdac endpoint takes in an st_date parameter that is the last date of the images,
-        and a count for the number of image URLs, this counts *back* from the end date,
-        the number of images can vary for some reason, images can be missing, so just simply estimating
-        the count by looking at the time interval between images is not a complete solution
+        Fills up self.url_queue with ImageURLs. The urls are received from
+        https://www.mosdac.gov.in/gallery/getImage.php which needs an `st_date` parameter that is the *last* date of
+        the images, and a `count` parameter for the number of image URLs, this counts *back* from the end date,
+        the number of images per day is inconsistent, we overestimate the `count` and filter out the urls that lie
+        outside the desired time frame.
         """
 
         logger.info("Getting URLs!")
@@ -104,6 +107,7 @@ class Downloader:
 
         for index, url in enumerate(data.split(",")):
             self.url_queue.put_nowait(ImageURL(url, index + 1))
+        self.total_urls = index + 1
 
     async def worker(self):
         while True:
@@ -114,19 +118,23 @@ class Downloader:
 
     async def download_and_write_one_image(self):
         url: ImageURL = await self.url_queue.get()
-        logger.debug(f"working on image {url.image_number}")
+        logger.debug(f"Working on image {url.image_number}/{self.total_urls}")
         try:
             response = await self.client.get(url.url)
-            filename = url.url_suffix.split("/")[-1]
-            async with async_open(
-                f"Images/{self.name}/{url.image_number}-{filename}", "wb"
-            ) as file:
-                await file.write(response.content)
+            if response.status_code != 200:
+                logger.error(
+                    f"{response.status_code} {response.reason_phrase} - {url.url}"
+                )
+            else:
+                filename = url.url_suffix.split("/")[-1]
+                async with async_open(
+                    f"Images/{self.name}/{url.image_number}-{filename}", "wb"
+                ) as file:
+                    await file.write(response.content)
         except Exception as exc:
-            logger.error(exc)
+            logger.error(str(exc))
         finally:
             self.url_queue.task_done()
-        logger.debug(f"finished working on image {url.image_number}")
 
     async def run(self):
         self.get_urls()
@@ -136,7 +144,7 @@ class Downloader:
             worker.cancel()
 
 
-async def test(product: product.Product):
+async def test(product: settings.Product):
     async with httpx.AsyncClient() as client:
         start = datetime(2023, 7, 21)
         end = datetime(2023, 7, 22)
@@ -149,13 +157,18 @@ if __name__ == "__main__":
 
     import anytree
 
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+
     resolver = anytree.Resolver()
     path = "/Settings/INSAT-3D/IMAGER/Standard(Full Disk)/Shortwave Infrared"
-    settings_tree = product.make_settings_tree()
-    product = resolver.get(settings_tree, path)
+    settings_tree = settings.make_settings_tree()
+    prod = resolver.get(settings_tree, path)
 
     a = time.perf_counter()
-    asyncio.run(test(product))
+    asyncio.run(test(prod))
     delta = time.perf_counter() - a
 
     print(f"Completed in {delta} seconds")
