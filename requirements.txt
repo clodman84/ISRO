@@ -1,3 +1,4 @@
+aiofile==3.8.7
 anytree==2.9.0
 dearpygui==1.9.1
 httpx==0.24.1
