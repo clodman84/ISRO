@@ -1,14 +1,29 @@
 import asyncio
 import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
 import product
+from aiofile import async_open
 
 logger = logging.getLogger("Timelapse.Downloader")
 
 MOSDAC_STRING = "https://mosdac.gov.in/look/"
+
+
+def prepare_directories(name: str):
+    if os.path.isdir(f"Images/{name}"):
+        logger.warning(f"Images/{name} already exists, the files will be overwritten")
+    else:
+        os.makedirs(f"Images/{name}")
+
+    if os.path.isdir("Videos"):
+        pass
+    else:
+        os.mkdir("Videos")
+    logger.info("Folders Created!")
 
 
 @dataclass
@@ -46,6 +61,8 @@ class Downloader:
         self.end_date = end_date
         self.url_queue = asyncio.Queue()
         self.num_workers = num_workers
+
+        prepare_directories(name)
 
     def get_urls(self):
         """
@@ -97,17 +114,19 @@ class Downloader:
 
     async def download_and_write_one_image(self):
         url: ImageURL = await self.url_queue.get()
+        logger.debug(f"working on image {url.image_number}")
         try:
             response = await self.client.get(url.url)
             filename = url.url_suffix.split("/")[-1]
-            with open(
+            async with async_open(
                 f"Images/{self.name}/{url.image_number}-{filename}", "wb"
             ) as file:
-                file.write(response.content)
+                await file.write(response.content)
         except Exception as exc:
             logger.error(exc)
         finally:
             self.url_queue.task_done()
+        logger.debug(f"finished working on image {url.image_number}")
 
     async def run(self):
         self.get_urls()
@@ -126,23 +145,17 @@ async def test(product: product.Product):
 
 
 if __name__ == "__main__":
-    import os
+    import time
 
     import anytree
-
-    if os.path.isdir(f"Images/Test"):
-        logger.warning(f"Images/Test already exists, the files will be overwritten")
-    else:
-        os.makedirs(f"Images/Test")
-
-    if os.path.isdir("Videos"):
-        pass
-    else:
-        os.mkdir("Videos")
-    logger.info("Folders Created!")
 
     resolver = anytree.Resolver()
     path = "/Settings/INSAT-3D/IMAGER/Standard(Full Disk)/Shortwave Infrared"
     settings_tree = product.make_settings_tree()
     product = resolver.get(settings_tree, path)
+
+    a = time.perf_counter()
     asyncio.run(test(product))
+    delta = time.perf_counter() - a
+
+    print(f"Completed in {delta} seconds")
