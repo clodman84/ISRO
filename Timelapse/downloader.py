@@ -126,6 +126,10 @@ class Downloader:
                     f"{response.status_code} {response.reason_phrase} - {url.url}"
                 )
             else:
+                # I could just save the files with the last part of the url, with the date
+                # and use the -pattern_type glob in the ffmpeg command in video.py, without
+                # having to do this image_number chicanery...
+                # but the glob pattern_type only works on linux :(
                 async with async_open(
                     f"Images/{self.name}/{url.image_number}-{self.product.pattern}",
                     "wb",
