@@ -19,7 +19,13 @@ def main():
     with dpg.window(tag="Primary Window"):
         with dpg.menu_bar():
             with dpg.menu(label="Tools"):
-                dpg.add_menu_item(label="Show Demo", callback=lambda: demo.show_demo())
+                dpg.add_menu_item(
+                    label="Show Item Registry", callback=dpg.show_item_registry
+                )
+                dpg.add_menu_item(
+                    label="Show Performance Metrics", callback=dpg.show_metrics
+                )
+                dpg.add_menu_item(label="Show Debug", callback=dpg.show_debug)
 
         with dpg.table(
             parent="Primary Window", resizable=True, reorderable=True, hideable=True
