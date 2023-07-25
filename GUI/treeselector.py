@@ -21,9 +21,18 @@ class TreeSelector:
         t = time.perf_counter() - a
         logger.info(f"Tree rendered in {t} seconds")
 
+    def click_callback(self, sender, app_data, user_data):
+        logger.debug(f"Sender: {sender} AppData: {app_data} UserData: {user_data}")
+
     def _render(self, root: anytree.Node, parent):
         if root.is_leaf:
-            new_parent = dpg.add_tree_node(label=root.name, parent=parent, leaf=True)
+            dpg.add_button(
+                label=root.name,
+                width=450,
+                parent=parent,
+                user_data=root,
+                callback=self.click_callback,
+            )
             return
         else:
             new_parent = dpg.add_tree_node(label=root.name, parent=parent)
