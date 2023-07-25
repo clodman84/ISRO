@@ -1,7 +1,6 @@
 import logging
 
 import dearpygui.dearpygui as dpg
-from dearpygui import demo
 
 import GUI
 import Timelapse
@@ -33,11 +32,14 @@ def main():
             dpg.add_table_column(label="Logs")
             dpg.add_table_column(label="Product Selector")
             with dpg.table_row():
-                with dpg.child_window() as logger_window:
-                    log = GUI.Logger(parent=logger_window)
-                    log.setFormatter(formatter)
-                    TimelapseLogger.addHandler(log)
-                    GUI_Logger.addHandler(log)
+                with dpg.group():
+                    with dpg.child_window(height=300) as logger_window:
+                        log = GUI.Logger(parent=logger_window)
+                        log.setFormatter(formatter)
+                        TimelapseLogger.addHandler(log)
+                        GUI_Logger.addHandler(log)
+                    with dpg.child_window() as explorer_window:
+                        GUI.Explorer(parent=explorer_window)
                 with dpg.child_window() as product_selector_window:
                     settings_root = Timelapse.make_settings_tree()
                     GUI.TreeSelector(settings_root, parent=product_selector_window)
