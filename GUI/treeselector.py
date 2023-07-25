@@ -15,14 +15,14 @@ class TreeSelector:
     def __init__(self, root: anytree.Node, parent):
         self.parent = parent
         self.root = root
-        self.resolver = anytree.Resolver()
+        self.selected_node = None
         a = time.perf_counter()
         self._render(root, parent)
         t = time.perf_counter() - a
-        logger.info(f"Tree rendered in {t} seconds")
+        logger.debug(f"Tree rendered in {t} seconds")
 
     def click_callback(self, sender, app_data, user_data):
-        logger.debug(f"Sender: {sender} AppData: {app_data} UserData: {user_data}")
+        self.selected_node = user_data
 
     def _render(self, root: anytree.Node, parent):
         if root.is_leaf:
