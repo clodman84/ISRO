@@ -1,7 +1,7 @@
 import logging
 import subprocess
 
-import settings
+from . import settings
 
 logger = logging.getLogger("Timelapse.Video")
 

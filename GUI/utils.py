@@ -2,11 +2,11 @@ import logging
 
 import dearpygui.dearpygui as dpg
 
-ModalHiddenList = []
+MODAL_HIDDEN_LIST = []
 
 
-def modalMessage(message):
-    if message in ModalHiddenList:
+def modal_message(message):
+    if message in MODAL_HIDDEN_LIST:
         return
     with dpg.mutex():
         with dpg.window(
@@ -16,7 +16,7 @@ def modalMessage(message):
             dpg.add_separator()
             dpg.add_checkbox(
                 label="Don't show this again.",
-                callback=lambda: ModalHiddenList.append(message),
+                callback=lambda: MODAL_HIDDEN_LIST.append(message),
             )
             with dpg.group(horizontal=True):
                 dpg.add_button(
@@ -34,7 +34,6 @@ class Logger(logging.Handler):
         super().__init__()
         self.log_level = 0
         self._auto_scroll = True
-        self.filter_id = None
         self.count = 0
         self.flush_count = 1000
         self.window_id = parent
@@ -104,9 +103,10 @@ class Logger(logging.Handler):
             theme = self.warning_theme
         elif level == 40:
             theme = self.error_theme
-            modalMessage(message)
+            modal_message(message)
         elif level == 50:
             theme = self.critical_theme
+            modal_message(message)
 
         new_log = dpg.add_text(
             message, parent=self.filter_id, filter_key=message, wrap=0
