@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
-import settings
 from aiofile import async_open
+
+from . import settings
 
 logger = logging.getLogger("Timelapse.Downloader")
 

@@ -43,7 +43,7 @@ def parse_dict_into_tree(dictionary: dict, parent: anytree.Node):
 def make_settings_tree():
     settings = anytree.Node("Settings")
     products = get_product_dict()
-    logger.info("Building settings tree for:")
+    logger.debug("Building settings tree for:")
     for satellite in products:
         logger.debug(f"\t{satellite['sat']}")
         parse_dict_into_tree(satellite, parent=settings)
