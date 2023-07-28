@@ -17,12 +17,17 @@ class TreeSelector:
         self.root = root
         self.selected_node = None
         a = time.perf_counter()
+        self.status_text = dpg.add_text(
+            "Select a product type from the dropdown menu...", parent=parent
+        )
+        dpg.add_separator()
         self._render(root, parent)
         t = time.perf_counter() - a
         logger.debug(f"Tree rendered in {t} seconds")
 
-    def click_callback(self, sender, app_data, user_data):
+    def click_callback(self, sender, app_data, user_data: anytree.Node):
         self.selected_node = user_data
+        dpg.set_value(self.status_text, f"Selected Product: {user_data.name}")
 
     def _render(self, root: anytree.Node, parent):
         if root.is_leaf:

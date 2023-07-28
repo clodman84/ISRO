@@ -25,6 +25,51 @@ def get_product_dict():
 
 
 def parse_dict_into_tree(dictionary: dict, parent: anytree.Node):
+    """
+    Makes a tree from the MOSDAC response that looks like this:
+
+    [
+        {
+        'sat': 'EOS-06',  <-- first item is always a string, which is used to name the parent Node while recursing
+        'sensor': [
+            {
+                'sen': 'Scatterometer'
+                'type': [
+                    {
+                    'product': 'Value Added Product'
+                    'prodlist': [
+                        {
+                        'prod': 'Analysed Winds' <-- The leaf nodes of the tree, we dig till we get till here
+                        'pat': ...
+                        },
+                        {
+                        'prod': ...
+                        'pat': ...
+                        }
+
+                    ]
+                    }
+                    {
+                    'product': 'Standard Products'
+                    'prodlist': [...]
+                    }
+                ]
+            },
+            {
+                'sen': ...
+                'type': ...
+            }
+        ]
+        },
+
+        {
+        'sat': 'INSAT..'
+        'sensor': [...]
+        },
+
+        ...
+    ]
+    """
     new_parent_node = parent
     for key, value in dictionary.items():
         if isinstance(value, str):
