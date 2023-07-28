@@ -8,12 +8,14 @@ import Timelapse
 
 def main():
     dpg.create_context()
-    dpg.create_viewport(title="Timelapse Generator", width=896, height=600)
+    dpg.create_viewport(title="Timelapse Generator")
     TimelapseLogger = logging.getLogger("Timelapse")
     GUI_Logger = logging.getLogger("GUI")
     TimelapseLogger.setLevel(logging.DEBUG)
     GUI_Logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter("%(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "[{asctime}] [{levelname:<8}] {name}: {message}", "%H:%M:%S", style="{"
+    )
 
     with dpg.window(tag="Primary Window"):
         with dpg.menu_bar():
@@ -46,7 +48,7 @@ def main():
 
     dpg.setup_dearpygui()
     dpg.set_primary_window("Primary Window", True)
-    dpg.show_viewport()
+    dpg.show_viewport(maximized=True)
     dpg.start_dearpygui()
     dpg.destroy_context()
 
