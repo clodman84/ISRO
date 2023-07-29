@@ -7,6 +7,10 @@ import dearpygui.dearpygui as dpg
 logger = logging.getLogger("GUI.TreeSelector")
 
 
+class TreeError(Exception):
+    pass
+
+
 class TreeSelector:
     """
     Takes in any arbitrary tree and then creates a dynamic settings window, that ultimately returns a leaf node.
@@ -28,6 +32,11 @@ class TreeSelector:
     def click_callback(self, sender, app_data, user_data: anytree.Node):
         self.selected_node = user_data
         dpg.set_value(self.status_text, f"Selected Product: {user_data.name}")
+
+    def get_node(self):
+        if not self.selected_node:
+            raise TreeError(f"Nothing was selected from {self.root.name} tree!")
+        return self.selected_node
 
     def _render(self, root: anytree.Node, parent):
         if root.is_leaf:
