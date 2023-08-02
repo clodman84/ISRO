@@ -62,7 +62,7 @@ class DownloaderWindow:
             )
             try:
                 node = self.product_selector.get_node()
-                name = node.name + str([f"{d}:'%d%b%Y'" for d in self.dates])
+                name = node.name + "_" + "_".join(f"{d:%d%b%Y}" for d in self.dates)
             except treeselector.TreeError:
                 return
         return "_".join(name.split())
