@@ -29,10 +29,8 @@ class ImageWindow:
             label="ImageWindow", pos=(20, 100), width=500, height=500, no_title_bar=True
         ) as self.window_id:
             with dpg.group(horizontal=True, parent=self.window_id):
-                dpg.add_button(label="Previous", callback=lambda: self._loadTexture(-1))
-                dpg.add_button(label="Next", callback=lambda: self._loadTexture(1))
-                dpg.add_button(label="Play", tag=f"play-{self.window_id}")
-                dpg.add_button(label="Rewind", tag=f"rewind-{self.window_id}")
+                dpg.add_button(label="Previous", tag=f"previous-{self.window_id}")
+                dpg.add_button(label="Next", tag=f"next-{self.window_id}")
                 dpg.add_button(label="Close", callback=lambda: self._close())
 
         with dpg.child_window(
@@ -68,10 +66,10 @@ class ImageWindow:
             dpg.add_item_active_handler(callback=lambda: self._loadTexture(-1))
 
         dpg.bind_item_handler_registry(
-            f"play-{self.window_id}", f"playHandler-{self.window_id}"
+            f"next-{self.window_id}", f"playHandler-{self.window_id}"
         )
         dpg.bind_item_handler_registry(
-            f"rewind-{self.window_id}", f"rewindHandler-{self.window_id}"
+            f"previous-{self.window_id}", f"rewindHandler-{self.window_id}"
         )
 
     def _loadTexture(self, i):
