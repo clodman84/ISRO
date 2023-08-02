@@ -55,9 +55,17 @@ class DownloaderWindow:
 
     @property
     def name(self):
-        return "_".join(
-            dpg.get_value("name").split()
-        )  # don't want to have any spaces in the name
+        name = dpg.get_value("name").split()
+        if not name:
+            logger.warning(
+                "You haven't named your Download! Setting default name from product..."
+            )
+            try:
+                node = self.product_selector.get_node()
+                name = node.name + str([f"{d}:'%d%b%Y'" for d in self.dates])
+            except treeselector.TreeError:
+                return
+        return "_".join(name.split())
 
     @property
     def dates(self):
