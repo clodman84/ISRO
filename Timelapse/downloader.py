@@ -79,9 +79,13 @@ class Downloader:
         """
 
         logger.info("Getting URLs!")
-        start_time = self.start_date.strftime("%d%b%Y").upper()
+        start_time = self.start_date.strftime("%Y-%m-%d").upper()
         end_time = self.end_date.strftime("%Y-%m-%d")
-        count = (self.end_date - self.start_date).total_seconds() / 1800
+
+        if self.end_date == self.start_date:
+            count = 48
+        else:
+            count = (self.end_date - self.start_date).total_seconds() / 1800
 
         json = {
             "prod": self.product.pattern,
@@ -123,9 +127,13 @@ class Downloader:
         try:
             response = await self.client.get(url.url)
             if response.status_code != 200:
-                logger.error(
+                error_message = (
                     f"{response.status_code} {response.reason_phrase} - {url.url}"
                 )
+                if response.status_code == 404:
+                    logger.warning(error_message)
+                else:
+                    logger.error(error_message)
             else:
                 async with async_open(
                     f"Images/{self.name}/{url.image_number}-{self.product.pattern}",
@@ -133,7 +141,7 @@ class Downloader:
                 ) as file:
                     await file.write(response.content)
         except Exception as exc:
-            logger.error(f"{exc.__class__.__name__} while working on {url.url}")
+            logger.warning(f"{exc.__class__.__name__} while working on {url.url}")
         finally:
             self.url_queue.task_done()
 
