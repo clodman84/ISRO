@@ -102,21 +102,20 @@ class Explorer:
     def _loadDirectories(self):
         imageFolders = []
         if os.path.isdir("./Images"):
-            logger.debug("Images exists")
             imageFolders = os.listdir("./Images")
         if not imageFolders:
-            dpg.delete_item("ExpWindow")
             logger.warning("No image folders were found.")
-            with dpg.child_window(
-                parent=self.window_id, autosize_x=True, autosize_y=True, tag="ExpWindow"
-            ):
-                dpg.add_text("Make some videos and they will appear here.", wrap=0)
+            dpg.add_text(
+                "Make some videos and they will appear here.",
+                wrap=0,
+                parent=self.window_id,
+            )
             return
         if self.table:
             dpg.delete_item(self.table)
         with dpg.table(
             label="",
-            parent="ExpWindow",
+            parent=self.window_id,
             header_row=False,
             row_background=True,
             borders_innerH=True,
@@ -137,3 +136,4 @@ class Explorer:
                         user_data=directory,
                         callback=lambda s, a, u: ImageWindow(f"./Images/{u}/"),
                     )
+        logger.debug("Refreshed explorer window")
