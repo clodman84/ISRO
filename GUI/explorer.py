@@ -114,7 +114,7 @@ class Explorer:
 
     @staticmethod
     def make_image_window(node: anytree.Node):
-        directory = pathlib.Path("/".join(n.name for n in node.path))
+        directory = pathlib.Path("/".join(n.name for n in node.path))  # type: ignore
         ImageWindow(directory)
 
     def _load_directories(self):
