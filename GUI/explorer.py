@@ -6,7 +6,7 @@ from itertools import chain
 import anytree
 import dearpygui.dearpygui as dpg
 
-from .treeselector import TreeError, TreeSelector
+from .treeselector import TreeSelector
 from .utils import modal_message
 
 logger = logging.getLogger("GUI.Explorer")
@@ -76,9 +76,9 @@ class ImageWindow:
                 )
 
         with dpg.item_handler_registry(tag=f"playHandler-{self.window_id}"):
-            dpg.add_item_active_handler(callback=lambda: self._loadTexture(1))
+            dpg.add_item_active_handler(callback=lambda: self._load_texture(1))
         with dpg.item_handler_registry(tag=f"rewindHandler-{self.window_id}"):
-            dpg.add_item_active_handler(callback=lambda: self._loadTexture(-1))
+            dpg.add_item_active_handler(callback=lambda: self._load_texture(-1))
 
         dpg.bind_item_handler_registry(
             f"next-{self.window_id}", f"playHandler-{self.window_id}"
@@ -87,7 +87,7 @@ class ImageWindow:
             f"previous-{self.window_id}", f"rewindHandler-{self.window_id}"
         )
 
-    def _loadTexture(self, i):
+    def _load_texture(self, i):
         if (self.index > 0 and i == -1) or (
             self.index < len(self.image_list) - 1 and i == 1
         ):
@@ -112,6 +112,11 @@ class Explorer:
         )
         self._load_directories()
 
+    @staticmethod
+    def make_image_window(node: anytree.Node):
+        directory = pathlib.Path("/".join(n.name for n in node.path))
+        ImageWindow(directory)
+
     def _load_directories(self):
         folder = pathlib.Path("./Images")
         if not folder.exists():
@@ -121,5 +126,5 @@ class Explorer:
         if self.tree_window:
             dpg.delete_item(self.tree_window)
         with dpg.child_window(parent=self.window_id) as self.tree_window:
-            TreeSelector(root, parent=self.tree_window)
+            TreeSelector(root, parent=self.tree_window, callback=self.make_image_window)
         logger.debug("Refreshed explorer window")
