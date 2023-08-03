@@ -1,6 +1,6 @@
 import asyncio
 import logging
-import os
+import pathlib
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -15,15 +15,17 @@ MOSDAC_STRING = "https://mosdac.gov.in/look/"
 
 
 def prepare_directories(name: str):
-    if os.path.isdir(f"Images/{name}"):
-        logger.warning(f"Images/{name} already exists, the files will be overwritten")
+    images = pathlib.Path(f"./Images/{name}")
+    if images.exists():
+        logger.warning(f"{images} already exists, the files will be overwritten")
     else:
-        os.makedirs(f"Images/{name}")
+        images.mkdir()
 
-    if os.path.isdir("Videos"):
+    videos = pathlib.Path("./Vidoes")
+    if videos.exists():
         pass
     else:
-        os.mkdir("Videos")
+        videos.mkdir()
     logger.info("Folders Created!")
 
 
