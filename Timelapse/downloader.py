@@ -15,11 +15,11 @@ MOSDAC_STRING = "https://mosdac.gov.in/look/"
 
 
 def prepare_directories(name: str):
-    images = pathlib.Path(f"./Images")
+    images = pathlib.Path(f"./Images/{name}")
     if images.exists():
-        pass
+        logger.warning(f"{images} already exists! Files will be overwritten")
     else:
-        images.mkdir()
+        images.mkdir(parents=True)
 
     videos = pathlib.Path("./Videos")
     if videos.exists():
@@ -69,7 +69,7 @@ class Downloader:
         self.num_workers = num_workers
 
         self.total_urls = 0
-        prepare_directories(name)
+        prepare_directories(f"{self.product.path_string}/{self.name}")
 
     def get_urls(self):
         """
@@ -144,10 +144,7 @@ class Downloader:
                 file_path = pathlib.Path(
                     f"./Images/{self.product.path_string}/{self.name}/{url.image_number}-{self.product.pattern}"
                 )
-                async with async_open(
-                    file_path,
-                    "wb",
-                ) as file:
+                async with async_open(file_path, "wb") as file:
                     await file.write(response.content)
         except Exception as exc:
             logger.warning(f"{exc.__class__.__name__} while working on {url.url}")
