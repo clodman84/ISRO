@@ -35,7 +35,7 @@ class TreeSelector:
 
     def click_callback(self, sender, app_data, user_data: anytree.Node):
         self.selected_node = user_data
-        node_path = "/".join(node.name for node in self.selected_node.path[1:])
+        node_path = "/".join(node.name for node in self.selected_node.path[1:])  # type: ignore
         dpg.set_value(self.status_text, f"Selected node: {node_path}")
         self.callback(self.selected_node)
 

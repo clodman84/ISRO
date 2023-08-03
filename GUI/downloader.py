@@ -43,7 +43,7 @@ class DownloaderWindow:
             f"Download Settings:\n\tName:\t{name}\n\tStart:\t{start:'%d%b%Y'}\n\tEnd:\t{end:'%d%b%Y'}\n\tProduct:\t{product}"
         )
         async with httpx.AsyncClient() as client:
-            downloader = Downloader(client, name, product, start, end)
+            downloader = Downloader(client, name, product, start, end)  # type: ignore
             await downloader.run()
 
     def run(self):

@@ -18,7 +18,7 @@ class Product(anytree.Node):
 
     @property
     def path_string(self):
-        return "/".join(node.name for node in self.path[1:])
+        return "/".join(node.name for node in self.path[1:])  # type: ignore
 
 
 def get_product_dict():
