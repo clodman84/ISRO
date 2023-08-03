@@ -1,7 +1,7 @@
 import logging
-import os
+import pathlib
 import re
-from glob import glob
+from itertools import chain
 
 import dearpygui.dearpygui as dpg
 
@@ -11,10 +11,14 @@ logger = logging.getLogger("GUI.Explorer")
 
 
 class ImageWindow:
-    def __init__(self, directory):
-        self.image_list = sorted(glob(f"{directory}*.jpg"))
+    def __init__(self, directory: pathlib.Path):
+        self.image_list = list(
+            chain.from_iterable(directory.glob(ext) for ext in ("*.jpg", "*.png"))
+        )
         self.image_list.sort(
-            key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r"(\d+)", x)]
+            key=lambda x: [
+                int(c) if c.isdigit() else c for c in re.split(r"(\d+)", str(x))
+            ]
         )
 
         if len(self.image_list) == 0:
@@ -36,11 +40,11 @@ class ImageWindow:
         with dpg.child_window(
             parent=self.window_id, autosize_x=True, autosize_y=True
         ) as self.image_window:
-            width, height, _, data = dpg.load_image(self.image_list[self.index])
+            width, height, _, data = dpg.load_image(str(self.image_list[self.index]))
             with dpg.texture_registry() as self.registry:
                 dpg.add_raw_texture(width, height, data, tag=f"image-{self.window_id}")
             with dpg.plot(
-                label=self.image_list[self.index],
+                label=self.image_list[self.index].name,
                 parent=self.image_window,
                 width=-1,
                 height=-1,
@@ -77,10 +81,10 @@ class ImageWindow:
             self.index < len(self.image_list) - 1 and i == 1
         ):
             self.index += i
-        filename = self.image_list[self.index]
-        _, _, _, data = dpg.load_image(filename)
+        file = self.image_list[self.index]
+        _, _, _, data = dpg.load_image(str(file))
         dpg.set_value(f"image-{self.window_id}", data)
-        dpg.configure_item(self.image, label=filename)
+        dpg.configure_item(self.image, label=file.name)
 
     def _close(self):
         dpg.delete_item(self.window_id)
@@ -99,8 +103,9 @@ class Explorer:
 
     def _loadDirectories(self):
         imageFolders = []
-        if os.path.isdir("./Images"):
-            imageFolders = os.listdir("./Images")
+        folder = pathlib.Path("./Images")
+        if folder.is_dir():
+            imageFolders = list(folder.iterdir())
         if not imageFolders:
             logger.warning("No image folders were found.")
             dpg.add_text(
@@ -128,10 +133,10 @@ class Explorer:
             for index, directory in enumerate(imageFolders):
                 with dpg.table_row():
                     dpg.add_text(str(index + 1))
-                    dpg.add_text(directory)
+                    dpg.add_text(directory.name)
                     dpg.add_button(
                         label="View",
                         user_data=directory,
-                        callback=lambda s, a, u: ImageWindow(f"./Images/{u}/"),
+                        callback=lambda s, a, u: ImageWindow(u),
                     )
         logger.debug("Refreshed explorer window")
