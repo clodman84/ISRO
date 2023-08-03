@@ -16,6 +16,10 @@ class Product(anytree.Node):
         super().__init__(*args, **kwargs)
         self.pattern = pattern
 
+    @property
+    def path_string(self):
+        return "/".join(node.name for node in self.path[1:])
+
 
 def get_product_dict():
     logger.info("GET-ting json of product types...")

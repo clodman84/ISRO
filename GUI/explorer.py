@@ -3,11 +3,22 @@ import pathlib
 import re
 from itertools import chain
 
+import anytree
 import dearpygui.dearpygui as dpg
 
+from .treeselector import TreeError, TreeSelector
 from .utils import modal_message
 
 logger = logging.getLogger("GUI.Explorer")
+
+
+def load_filesystem_tree(path: pathlib.Path, parent: anytree.Node, is_root=False):
+    if path.is_file():
+        return
+    if not is_root:
+        parent = anytree.Node(path.name, parent=parent)
+    for p in path.iterdir():
+        load_filesystem_tree(p, parent)
 
 
 class ImageWindow:
@@ -95,48 +106,20 @@ class ImageWindow:
 class Explorer:
     def __init__(self, parent):
         self.window_id = parent
-        self.table = None
+        self.tree_window = None
         dpg.add_button(
-            label="Refresh", callback=self._loadDirectories, parent=self.window_id
+            label="Refresh", callback=self._load_directories, parent=self.window_id
         )
-        self._loadDirectories()
+        self._load_directories()
 
-    def _loadDirectories(self):
-        imageFolders = []
+    def _load_directories(self):
         folder = pathlib.Path("./Images")
-        if folder.is_dir():
-            imageFolders = list(folder.iterdir())
-        if not imageFolders:
-            logger.warning("No image folders were found.")
-            dpg.add_text(
-                "Make some videos and they will appear here.",
-                wrap=0,
-                parent=self.window_id,
-            )
-            return
-        if self.table:
-            dpg.delete_item(self.table)
-        with dpg.table(
-            label="",
-            parent=self.window_id,
-            header_row=False,
-            row_background=True,
-            borders_innerH=True,
-            borders_outerH=True,
-            borders_innerV=True,
-            borders_outerV=True,
-            delay_search=True,
-        ) as self.table:
-            dpg.add_table_column(width_fixed=True)
-            dpg.add_table_column(width_fixed=False)
-            dpg.add_table_column(width_fixed=True)
-            for index, directory in enumerate(imageFolders):
-                with dpg.table_row():
-                    dpg.add_text(str(index + 1))
-                    dpg.add_text(directory.name)
-                    dpg.add_button(
-                        label="View",
-                        user_data=directory,
-                        callback=lambda s, a, u: ImageWindow(u),
-                    )
+        if not folder.exists():
+            folder.mkdir()
+        root = anytree.Node("Images")
+        load_filesystem_tree(folder, root, is_root=True)
+        if self.tree_window:
+            dpg.delete_item(self.tree_window)
+        with dpg.child_window(parent=self.window_id) as self.tree_window:
+            TreeSelector(root, parent=self.tree_window)
         logger.debug("Refreshed explorer window")

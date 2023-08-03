@@ -15,13 +15,13 @@ MOSDAC_STRING = "https://mosdac.gov.in/look/"
 
 
 def prepare_directories(name: str):
-    images = pathlib.Path(f"./Images/{name}")
+    images = pathlib.Path(f"./Images")
     if images.exists():
-        logger.warning(f"{images} already exists, the files will be overwritten")
+        pass
     else:
         images.mkdir()
 
-    videos = pathlib.Path("./Vidoes")
+    videos = pathlib.Path("./Videos")
     if videos.exists():
         pass
     else:
@@ -104,7 +104,11 @@ class Downloader:
             ).json()[0]
         except httpx.ConnectError as e:
             logger.error(f"{e}. Check your internet connection.")
-            return []
+            return
+        except httpx.TimeoutException as e:
+            logger.error(f"{e}. Check your internet connection or try again later")
+            return
+
         logger.debug(f"Length of URL Data Received: {len(data)}")
 
         index = data.find(start_time)
@@ -137,8 +141,11 @@ class Downloader:
                 else:
                     logger.error(error_message)
             else:
+                file_path = pathlib.Path(
+                    f"./Images/{self.product.path_string}/{self.name}/{url.image_number}-{self.product.pattern}"
+                )
                 async with async_open(
-                    f"Images/{self.name}/{url.image_number}-{self.product.pattern}",
+                    file_path,
                     "wb",
                 ) as file:
                     await file.write(response.content)

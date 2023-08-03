@@ -17,8 +17,6 @@ class DownloaderWindow:
         self.product_selector = product_selector
         self.parent = parent
 
-        dpg.add_input_text(label="Video Name", width=300, tag="name")
-
         now = datetime.now()
         default_date = {
             "year": now.year % 100 + 100,
@@ -55,17 +53,11 @@ class DownloaderWindow:
 
     @property
     def name(self):
-        name = dpg.get_value("name").split()
-        if not name:
-            logger.warning(
-                "You haven't named your Download! Setting default name from product..."
-            )
-            try:
-                node = self.product_selector.get_node()
-                name = node.name + "_" + "_".join(f"{d:%d%b%Y}" for d in self.dates)
-            except treeselector.TreeError:
-                return
-        return "_".join(name.split())
+        try:
+            name = "_".join(f"{d:%d%b%Y}" for d in self.dates)
+            return name
+        except treeselector.TreeError:
+            return
 
     @property
     def dates(self):
