@@ -26,7 +26,7 @@ def get_product_dict():
 
 def parse_dict_into_tree(dictionary: dict, parent: anytree.Node):
     """
-    The MOSDAC response that looks like this:
+    The MOSDAC response looks like this:
 
     [
         {
@@ -69,6 +69,8 @@ def parse_dict_into_tree(dictionary: dict, parent: anytree.Node):
 
         ...
     ]
+
+    The code below turns this into a tree into a tree
     """
     new_parent_node = parent
     for key, value in dictionary.items():
