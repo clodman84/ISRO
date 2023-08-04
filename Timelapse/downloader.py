@@ -142,7 +142,7 @@ class Downloader:
                     logger.error(error_message)
             else:
                 file_path = pathlib.Path(
-                    f"./Images/{self.product.path_string}/{self.name}/{url.image_number}-{self.product.pattern}"
+                    f"./Images/{self.product.path_string}/{self.name}/{url.image_number}.{self.product.pattern[-3:]}"
                 )
                 async with async_open(file_path, "wb") as file:
                     await file.write(response.content)

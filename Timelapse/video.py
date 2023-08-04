@@ -1,15 +1,14 @@
 import logging
+import pathlib
 import subprocess
-
-from . import settings
 
 logger = logging.getLogger("Timelapse.Video")
 
 
 class VideoMaker:
-    def __init__(self, name: str, product: settings.Product, framerate=24):
+    def __init__(self, name: str, directory: pathlib.Path, framerate=24):
         self.name = name
-        self.product = product
+        self.directory = directory
         self.framerate = framerate
 
     def make_video(self):
@@ -22,7 +21,7 @@ class VideoMaker:
             "-framerate",
             str(self.framerate),
             "-i",
-            f"./Images/{self.name}/%d-{self.product.pattern}",
+            f"./{self.directory}/%d.jpg",
             "-vf",
             "pad=ceil(iw/2)*2:ceil(ih/2)*2",
             "-vcodec",
@@ -44,10 +43,10 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
 
     resolver = anytree.Resolver()
-    path = "/Settings/INSAT-3D/IMAGER/Standard(Full Disk)/Shortwave Infrared"
-    settings_tree = settings.make_settings_tree()
-    prod = resolver.get(settings_tree, path)
-    video = VideoMaker("Test", prod)
+    path = pathlib.Path(
+        "./Images/INSAT-3D/IMAGER/Special/Blended Image/03Aug2023_03Aug2023"
+    )
+    video = VideoMaker("Test", path)
 
     a = time.perf_counter()
     video.make_video()

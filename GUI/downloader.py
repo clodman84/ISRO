@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import pathlib
 from datetime import datetime
 
 import dearpygui.dearpygui as dpg
@@ -7,7 +8,7 @@ import httpx
 
 from Timelapse import Downloader
 
-from . import treeselector
+from . import treeselector, video
 
 logger = logging.getLogger("GUI.Downloader")
 
@@ -50,6 +51,11 @@ class DownloaderWindow:
         logger.info("Starting download...")
         asyncio.run(self.download())
         logger.info("Done!")
+        path = pathlib.Path(f"./Images/{self.product.path_string}/{self.name}")  # type: ignore
+        try:
+            video.PreviewWindow(path)
+        except FileNotFoundError:
+            logger.error(f"Files not found in {path} !")
 
     @property
     def name(self):
