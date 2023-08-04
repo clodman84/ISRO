@@ -5,3 +5,4 @@ imgui.ini
 /build/
 /setup.py
 /.venv/
+/.idea/
